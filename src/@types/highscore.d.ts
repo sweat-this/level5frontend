@@ -4,7 +4,7 @@ interface Highscore {
   userid: number;
   username: string;
   scoreid: string;
-  modeid:string;
+  modeid: number;
   modeName: string,
   characterid: number,
   levelid: number,

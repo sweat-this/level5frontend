@@ -1,17 +1,7 @@
-import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
-import { Title } from '@mui/icons-material';
-
-// const router = createBrowserRouter([
-//   { path: "/", element: <Title /> },
-//   {}
-// ]);
+import { Outlet } from 'react-router-dom';
 
 function App() {
-  return (
-    <>
-        <Outlet />
-    </>
-  );
+  return <Outlet />;
 }
 
 export default App;
