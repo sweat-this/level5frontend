@@ -1,8 +1,9 @@
 import { Grid } from '@mui/material';
+import { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import MainNavBar from './MainNavBar';
 
-export default function Layout({ children }: { children: JSX.Element }) {
+export default function Layout({ children }: Readonly<{ children: ReactNode }>) {
   const root = '/';
   const location = useLocation().pathname;
 

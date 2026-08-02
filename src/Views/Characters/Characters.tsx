@@ -19,9 +19,9 @@ const characterData = [
 
 export default function Characters() {
   return (
-    <Grid item container xs={12} spacing={2} columnSpacing={2}>
+    <Grid container size={12} spacing={2} columnSpacing={2}>
       {characterData.map((item) => (
-        <Grid item container xs={3} key={item.id}>
+        <Grid container size={3} key={item.id}>
           <CharacterCard title={item.name} name={item.name} description={item.description} image={item.image} />
         </Grid>
       ))}

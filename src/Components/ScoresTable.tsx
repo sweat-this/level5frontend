@@ -50,8 +50,8 @@ export default function ScoresTable() {
 
   return (
     <Paper square={false}>
-      <Grid item container xs={12}>
-        <Grid item xs={12}>
+      <Grid container size={12}>
+        <Grid size={12}>
           <Grid>
             <Typography variant="h6">Level 5 High Scores</Typography>
           </Grid>

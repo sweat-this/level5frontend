@@ -7,13 +7,15 @@ export default function SearchBar({ placeHolder, onInput }: { placeHolder: strin
       placeholder={placeHolder}
       type="Search"
       margin="normal"
-      InputProps={{
-        endAdornment: (
-          <InputAdornment position="start">
-            <SearchIcon />
-          </InputAdornment>
-        ),
-        style: { textAlign: 'center' }
+      slotProps={{
+        input: {
+          endAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+          style: { textAlign: 'center' }
+        }
       }}
       onChange={(e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => onInput(e.target.value)}
       sx={{ width: '100%', backgroundColor: 'TextField.background', margin: 0 }}

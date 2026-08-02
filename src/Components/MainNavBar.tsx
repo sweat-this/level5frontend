@@ -27,8 +27,8 @@ export default function MainNavBar() {
   return (
     <AppBar sx={style}>
       <Toolbar>
-        <Grid item container xs={12}>
-          <Grid item container xs={6} justifyContent="left" direction="row">
+        <Grid container size={12}>
+          <Grid container size={6} direction="row" sx={{ justifyContent: 'left' }}>
             <ButtonLink to="/" sx={{ fontWeight: 'bolder', fontSize: '1.1em' }}>
               Title
             </ButtonLink>
@@ -42,7 +42,7 @@ export default function MainNavBar() {
               Dr Blood
             </ButtonLink>
           </Grid>
-          <Grid item container xs={6} justifyContent="right" direction="row">
+          <Grid container size={6} direction="row" sx={{ justifyContent: 'right' }}>
             <Table
               sx={{
                 [`& .${tableCellClasses.root}`]: {

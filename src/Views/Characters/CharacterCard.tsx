@@ -12,8 +12,8 @@ export default function CharacterCard({
   description: string;
 }>) {
   return (
-    <Grid item container xs={12} alignContent="left" justifyContent="left">
-      <Grid item alignContent="left" justifyContent="left">
+    <Grid container size={12} sx={{ alignContent: 'left', justifyContent: 'left' }}>
+      <Grid sx={{ alignContent: 'left', justifyContent: 'left' }}>
         <Card sx={{ maxWidth: 300 }}>
           <CardActionArea>
             <CardMedia component="img" height="300" image={image} alt={title} />

@@ -1,6 +1,7 @@
-import { SxProps, Theme } from '@mui/material';
+import { Theme } from '@mui/material/styles';
 import {
   DataGrid,
+  DataGridProps,
   GridCallbackDetails,
   GridColDef,
   GridPaginationModel,
@@ -13,7 +14,7 @@ import { useLocation, useParams } from 'react-router-dom';
 // Styled against plain MUI palette tokens (grey/divider/background.paper) that always exist,
 // rather than a custom theme namespace - this project has no ThemeProvider wiring a custom
 // palette, so string keys like 'DataTable.headerColor' would silently resolve to nothing.
-const style: SxProps<Theme> = (theme) => ({
+const style: DataGridProps['sx'] = (theme: Theme) => ({
   width: '100%',
   padding: 1,
   '.MuiDataGrid-columnHeader, .MuiDataGrid-scrollbarFiller--header': {
@@ -47,7 +48,7 @@ export default function DataTable({
   loading,
   disableColumnFilter = false,
   disableColumnSorting = false
-}: {
+}: Readonly<{
   columns: GridColDef[];
   data: Summary;
   onPaginationChange: (model: GridPaginationModel, details: GridCallbackDetails) => void;
@@ -58,7 +59,7 @@ export default function DataTable({
   // silently does nothing.
   disableColumnFilter?: boolean;
   disableColumnSorting?: boolean;
-}) {
+}>) {
   const { content } = data;
   const [asyncContent, setAsyncContent] = useState<GridValidRowModel[]>([]);
   const location = useLocation();
@@ -67,6 +68,11 @@ export default function DataTable({
 
   // simulate async data. Bug fix for page render block
   useEffect(() => {
+    // pre-existing, deliberate: mirrors `content` into local state so the loading spinner (see
+    // ScoresTable.tsx) turns off exactly when a new page of data arrives, not before. Rewriting
+    // this to avoid the effect would change that timing, which is outside the scope of the
+    // react-hooks version bump that introduced this rule.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAsyncContent(content as GridValidRowModel[]);
     setLoading(false);
   }, [content, setLoading]);
@@ -75,12 +81,12 @@ export default function DataTable({
   useEffect(() => {
     // when going to home page
     if (location.pathname === '/') {
-      apiRef.current.setPage(0);
+      apiRef.current?.setPage(0);
     }
 
     // when filter changes, but page doesn't
     if (params.filter && !params.page) {
-      apiRef.current.setPage(0);
+      apiRef.current?.setPage(0);
     }
   }, [apiRef, location, params.filter, params.page]);
 
