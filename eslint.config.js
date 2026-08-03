@@ -11,7 +11,7 @@ import globals from 'globals';
 export default defineConfig(
   // Matches the project's original lint scope (`eslint src/**/*.{ts,tsx}`): root-level config
   // files were never linted before switching the script to `eslint .` for flat-config's sake.
-  globalIgnores(['dist', 'vite.config.ts', 'eslint.config.js']),
+  globalIgnores(['dist', 'vite.config.ts', 'eslint.config.js', 'vitest.setup.ts']),
   js.configs.recommended,
   tseslint.configs.recommended,
   react.configs.flat.recommended,
