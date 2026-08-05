@@ -15,9 +15,9 @@ describe("DrBlood", () => {
   it("renders a thumbnail button per video instead of loading every player up front", () => {
     render(<DrBlood />);
 
-    expect(screen.getAllByRole("button", { name: "Play video" })).toHaveLength(
-      8,
-    );
+    expect(
+      screen.getAllByRole("button", { name: /Play video \d+ of 8/ }),
+    ).toHaveLength(8);
     expect(screen.queryByTestId(/youtube-player-/)).not.toBeInTheDocument();
   });
 
@@ -25,14 +25,16 @@ describe("DrBlood", () => {
     const user = userEvent.setup();
     render(<DrBlood />);
 
-    const buttons = screen.getAllByRole("button", { name: "Play video" });
+    const buttons = screen.getAllByRole("button", {
+      name: /Play video \d+ of 8/,
+    });
     await user.click(buttons[0]);
 
     expect(
       screen.getByTestId("youtube-player-TY44PEt4378"),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Play video" })).toHaveLength(
-      7,
-    );
+    expect(
+      screen.getAllByRole("button", { name: /Play video \d+ of 8/ }),
+    ).toHaveLength(7);
   });
 });

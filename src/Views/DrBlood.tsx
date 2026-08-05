@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Box, Grid } from "@mui/material";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import YouTube from "react-youtube";
+import usePageMeta from "../hooks/usePageMeta";
 
 const videoIds = [
   "TY44PEt4378",
@@ -23,9 +24,14 @@ export default function DrBlood() {
   // someone actually clicks get turned into real players.
   const [playing, setPlaying] = useState<Set<string>>(new Set());
 
+  usePageMeta({
+    title: "Sweat This - Dr Blood",
+    description: "Dr Blood videos and highlights from Level 5.",
+  });
+
   return (
     <Grid container spacing={2}>
-      {videoIds.map((videoId) =>
+      {videoIds.map((videoId, index) =>
         playing.has(videoId) ? (
           <Grid key={videoId}>
             <YouTube
@@ -42,10 +48,11 @@ export default function DrBlood() {
               component="button"
               type="button"
               onClick={() => setPlaying(new Set(playing).add(videoId))}
-              aria-label="Play video"
+              aria-label={`Play video ${index + 1} of ${videoIds.length}`}
               sx={{
                 position: "relative",
                 width: THUMBNAIL_WIDTH,
+                maxWidth: "100%",
                 height: THUMBNAIL_HEIGHT,
                 padding: 0,
                 border: "none",

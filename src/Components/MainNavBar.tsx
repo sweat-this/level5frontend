@@ -1,74 +1,140 @@
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import { Chip, Grid, SxProps, Table, TableBody, TableCell, tableCellClasses, TableRow, Theme, Typography } from '@mui/material';
-import ButtonLink from './ButtonLink';
-import useCurrentVersion from '../api/hooks/useCurrentVersion';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import AppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
+import {
+  Box,
+  Chip,
+  Drawer,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
+  Stack,
+  SxProps,
+  Theme,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import ButtonLink from "./ButtonLink";
+import useCurrentVersion from "../api/hooks/useCurrentVersion";
+import useServerHealth from "../api/hooks/useServerHealth";
 
 const style: SxProps<Theme> = {
-  color: 'text.primary',
-  backgroundImage: 'none',
-  backgroundColor: 'background.default',
-  boxShadow: 'none',
-  position: 'unset',
+  color: "text.primary",
+  backgroundImage: "none",
+  backgroundColor: "background.default",
+  boxShadow: "none",
+  position: "unset",
 };
 
-function getStatusChipColor(isError: boolean): 'error' | 'success' {
-  return isError ? 'error' : 'success';
+const navLinks = [
+  { to: "/", label: "Title" },
+  { to: "/level5", label: "Scores" },
+  { to: "/level5/characters", label: "Characters" },
+  { to: "/level5/drblood", label: "Dr Blood" },
+];
+
+function getStatusChipColor(isOffline: boolean): "error" | "success" {
+  return isOffline ? "error" : "success";
 }
 
-function getServerStatusLabel(isError: boolean): 'Offline' | 'Online' {
-  return isError ? 'Offline' : 'Online';
+function getServerStatusLabel(isOffline: boolean): "Offline" | "Online" {
+  return isOffline ? "Offline" : "Online";
 }
 
 export default function MainNavBar() {
-  const { data: currentVersion, isError, isPending } = useCurrentVersion();
-  const versionLabel = currentVersion ?? (isPending ? 'Loading...' : 'Unknown');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const {
+    data: currentVersion,
+    isError: versionError,
+    isPending: versionPending,
+  } = useCurrentVersion();
+  // Server status and current version are two different claims - a version-fetch error doesn't
+  // mean the API is down, so this reads a dedicated health check instead of reusing useCurrentVersion's error state.
+  const { data: isHealthy, isError: healthError } = useServerHealth();
+
+  const versionLabel =
+    currentVersion ?? (versionPending ? "Loading..." : "Unknown");
+  const isOffline = healthError || isHealthy === false;
+
+  const statusChips = (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{ flexWrap: "wrap", alignItems: "center" }}
+    >
+      <Typography variant="body2">Version</Typography>
+      <Chip
+        size="small"
+        label={versionLabel}
+        color={getStatusChipColor(versionError)}
+      />
+      <Typography variant="body2">Server</Typography>
+      <Chip
+        size="small"
+        label={getServerStatusLabel(isOffline)}
+        color={getStatusChipColor(isOffline)}
+      />
+    </Stack>
+  );
+
+  const navButtons = navLinks.map((link) => (
+    <ButtonLink
+      key={link.to}
+      to={link.to}
+      sx={{ fontWeight: "bolder", fontSize: "1.1em" }}
+    >
+      {link.label}
+    </ButtonLink>
+  ));
+
+  if (isMobile) {
+    return (
+      <AppBar sx={style}>
+        <Toolbar sx={{ justifyContent: "space-between" }}>
+          <IconButton
+            aria-label="Open navigation menu"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <MenuIcon />
+          </IconButton>
+          {statusChips}
+          <Drawer
+            anchor="left"
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+          >
+            <List sx={{ width: 220 }}>
+              {navLinks.map((link) => (
+                <ListItemButton
+                  key={link.to}
+                  component={Link}
+                  to={link.to}
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  <ListItemText primary={link.label} />
+                </ListItemButton>
+              ))}
+            </List>
+          </Drawer>
+        </Toolbar>
+      </AppBar>
+    );
+  }
 
   return (
     <AppBar sx={style}>
-      <Toolbar>
-        <Grid container size={12}>
-          <Grid container size={6} direction="row" sx={{ justifyContent: 'left' }}>
-            <ButtonLink to="/" sx={{ fontWeight: 'bolder', fontSize: '1.1em' }}>
-              Title
-            </ButtonLink>
-            <ButtonLink to="/level5" sx={{ fontWeight: 'bolder', fontSize: '1.1em' }}>
-              Scores
-            </ButtonLink>
-            <ButtonLink to="/level5/characters" sx={{ fontWeight: 'bolder', fontSize: '1.1em' }}>
-              Characters
-            </ButtonLink>
-            <ButtonLink to="/level5/drblood" sx={{ fontWeight: 'bolder', fontSize: '1.1em' }}>
-              Dr Blood
-            </ButtonLink>
-          </Grid>
-          <Grid container size={6} direction="row" sx={{ justifyContent: 'right' }}>
-            <Table
-              sx={{
-                [`& .${tableCellClasses.root}`]: {
-                  borderBottom: 'none',
-                },
-              }}
-            >
-              <TableBody>
-                <TableRow>
-                  <TableCell align="right">
-                    <Typography> Current Version</Typography>
-                  </TableCell>
-                  <TableCell align="left">
-                    <Chip label={versionLabel} color={getStatusChipColor(isError)} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography> Server Status</Typography>
-                  </TableCell>
-                  <TableCell align="left">
-                    <Chip label={getServerStatusLabel(isError)} color={getStatusChipColor(isError)} />
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Grid>
-        </Grid>
+      <Toolbar
+        sx={{ justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}
+      >
+        <Box sx={{ display: "flex", flexWrap: "wrap" }}>{navButtons}</Box>
+        {statusChips}
       </Toolbar>
     </AppBar>
   );
