@@ -4,14 +4,13 @@ import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
-import reactRefresh from 'eslint-plugin-react-refresh';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 
 export default defineConfig(
   // Matches the project's original lint scope (`eslint src/**/*.{ts,tsx}`): root-level config
   // files were never linted before switching the script to `eslint .` for flat-config's sake.
-  globalIgnores(['dist', 'vite.config.ts', 'eslint.config.js', 'vitest.setup.ts']),
+  globalIgnores(['.next', 'next.config.ts', 'eslint.config.js', 'vitest.config.ts', 'vitest.setup.ts', 'next-env.d.ts']),
   js.configs.recommended,
   tseslint.configs.recommended,
   react.configs.flat.recommended,
@@ -29,7 +28,6 @@ export default defineConfig(
     },
     plugins: {
       'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
     },
     settings: {
       // Explicit version, not 'detect': eslint-plugin-react's auto-detection calls a context
@@ -38,8 +36,10 @@ export default defineConfig(
     },
     rules: {
       ...reactHooks.configs['recommended-latest'].rules,
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      // Vite's JSX transform doesn't require React in scope.
+      // Next's error.tsx/not-found.tsx-style boundary components must accept props (error/reset)
+      // the framework passes at runtime even when a given fallback doesn't use them.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      // Next's own JSX transform doesn't require React in scope.
       'react/react-in-jsx-scope': 'off',
       'react/jsx-uses-react': 'off',
       // defaultProps on function components is deprecated (React 18.3+ warns on it) - TS optional

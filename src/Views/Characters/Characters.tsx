@@ -1,6 +1,5 @@
 import { Grid } from "@mui/material";
 import CharacterCard from "./CharacterCard";
-import usePageMeta from "../../hooks/usePageMeta";
 
 const characterData = [
   { id: 1, name: "Dr Blood", image: "/images/characters/dblood.png" },
@@ -23,11 +22,6 @@ const characterData = [
 ];
 
 export default function Characters() {
-  usePageMeta({
-    title: "Sweat This - Characters",
-    description: "Meet the playable characters in Level 5.",
-  });
-
   return (
     <Grid container size={12} spacing={2} columnSpacing={2}>
       {characterData.map((item) => (

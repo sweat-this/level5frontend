@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GridRenderCellParams } from "@mui/x-data-grid";
 import highscoreColumns from "./highscoreColumns";
 import { Mode } from "../constants/Enums";
+import type { Highscore } from "../lib/backend-v1-public/types";
 
 function renderCell(field: string, row: Partial<Highscore>): string {
   const column = highscoreColumns.find((c) => c.field === field);

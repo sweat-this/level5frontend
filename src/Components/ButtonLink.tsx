@@ -1,6 +1,11 @@
-import { Button, ButtonProps } from '@mui/material';
-import { Link } from 'react-router-dom';
+"use client";
 
-export default function ButtonLink({ ...props }: ButtonProps & { to: string }) {
-  return <Button component={Link} {...props} />;
+import { Button, type ButtonProps } from "@mui/material";
+import NextLinkAdapter from "./NextLinkAdapter";
+
+export default function ButtonLink({
+  href,
+  ...props
+}: ButtonProps & { href: string }) {
+  return <Button component={NextLinkAdapter} href={href} {...props} />;
 }

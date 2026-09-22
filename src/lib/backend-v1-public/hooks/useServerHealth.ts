@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-const baseUrl = import.meta.env.VITE_API_BASE_URL;
+const baseUrl = process.env.NEXT_PUBLIC_LEGACY_API_BASE_URL;
 
 // The backend's /health endpoint is a plain liveness probe (empty body, 200/503 status) rather
 // than JSON, so this hits it directly instead of through apiFetch - which always tries to parse
