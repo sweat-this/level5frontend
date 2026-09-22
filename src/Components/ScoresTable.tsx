@@ -1,9 +1,11 @@
+"use client";
+
 import { Box, CircularProgress, Grid, Paper, Typography } from "@mui/material";
 import { useState } from "react";
 import { GridPaginationModel } from "@mui/x-data-grid";
 import DataTable from "./DataTable";
 import highscoreColumns from "./highscoreColumns";
-import useHighscores from "../api/hooks/useHighscores";
+import useHighscores from "../lib/backend-v1-public/hooks/useHighscores";
 
 const DEFAULT_PAGE_SIZE = 50;
 

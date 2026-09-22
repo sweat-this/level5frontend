@@ -1,5 +1,6 @@
+"use client";
+
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import {
@@ -19,8 +20,9 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import ButtonLink from "./ButtonLink";
-import useCurrentVersion from "../api/hooks/useCurrentVersion";
-import useServerHealth from "../api/hooks/useServerHealth";
+import NextLinkAdapter from "./NextLinkAdapter";
+import useCurrentVersion from "../lib/backend-v1-public/hooks/useCurrentVersion";
+import useServerHealth from "../lib/backend-v1-public/hooks/useServerHealth";
 
 const style: SxProps<Theme> = {
   color: "text.primary",
@@ -87,7 +89,7 @@ export default function MainNavBar() {
   const navButtons = navLinks.map((link) => (
     <ButtonLink
       key={link.to}
-      to={link.to}
+      href={link.to}
       sx={{ fontWeight: "bolder", fontSize: "1.1em" }}
     >
       {link.label}
@@ -114,8 +116,8 @@ export default function MainNavBar() {
               {navLinks.map((link) => (
                 <ListItemButton
                   key={link.to}
-                  component={Link}
-                  to={link.to}
+                  component={NextLinkAdapter}
+                  href={link.to}
                   onClick={() => setDrawerOpen(false)}
                 >
                   <ListItemText primary={link.label} />

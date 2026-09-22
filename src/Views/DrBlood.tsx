@@ -1,8 +1,9 @@
+"use client";
+
 import { useState } from "react";
 import { Box, Grid } from "@mui/material";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import YouTube from "react-youtube";
-import usePageMeta from "../hooks/usePageMeta";
 
 const videoIds = [
   "TY44PEt4378",
@@ -23,11 +24,6 @@ export default function DrBlood() {
   // costing every visitor 8x that weight whether or not they watched anything. Only the videos
   // someone actually clicks get turned into real players.
   const [playing, setPlaying] = useState<Set<string>>(new Set());
-
-  usePageMeta({
-    title: "Sweat This - Dr Blood",
-    description: "Dr Blood videos and highlights from Level 5.",
-  });
 
   return (
     <Grid container spacing={2}>

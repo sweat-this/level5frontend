@@ -1,3 +1,5 @@
+"use client";
+
 import { Theme } from "@mui/material/styles";
 import {
   DataGrid,
@@ -9,6 +11,7 @@ import {
   useGridApiRef,
 } from "@mui/x-data-grid";
 import { useEffect, useState } from "react";
+import type { Summary } from "../lib/backend-v1-public/types";
 
 // Styled against plain MUI palette tokens (grey/divider/background.paper) that always exist,
 // rather than a custom theme namespace - this project has no ThemeProvider wiring a custom

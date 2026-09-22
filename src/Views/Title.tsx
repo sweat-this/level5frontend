@@ -1,13 +1,7 @@
 import { Box, CardMedia, Stack } from "@mui/material";
-import { Link } from "react-router-dom";
-import usePageMeta from "../hooks/usePageMeta";
+import Link from "next/link";
 
 export default function Title() {
-  usePageMeta({
-    title: "Sweat This",
-    description: "Sweat This - Level 5 high scores, characters, and game info.",
-  });
-
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Stack
@@ -18,7 +12,7 @@ export default function Title() {
         }}
         spacing={2}
       >
-        <Link to="/level5">
+        <Link href="/level5">
           <CardMedia
             component="img"
             image="/images/logo.png"
