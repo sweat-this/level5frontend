@@ -1,23 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetAccountRuntimeConfigForTests } from "@/lib/web-auth/config";
 import { resetWebSessionStoreConfigForTests } from "@/lib/web-auth/session-store-config";
 import { resetSessionStoreRuntimeForTests } from "@/lib/web-auth/session-store-runtime";
 import { GET } from "./route";
 
-beforeEach(() => {
-  vi.unstubAllEnvs();
-  resetWebSessionStoreConfigForTests();
-  resetSessionStoreRuntimeForTests();
-});
+function stubValidAccountConfig(): void {
+  vi.stubEnv("LEVEL5_V2_API_BASE_URL", "https://backend.example");
+  vi.stubEnv("LEVEL5_APP_ORIGIN", "https://app.example");
+}
 
-afterEach(() => {
+function resetAll(): void {
   vi.unstubAllEnvs();
+  resetAccountRuntimeConfigForTests();
   resetWebSessionStoreConfigForTests();
   resetSessionStoreRuntimeForTests();
-});
+}
+
+beforeEach(resetAll);
+afterEach(resetAll);
 
 describe("GET /health/ready", () => {
-  it("returns 200 when memory mode is configured", async () => {
+  it("returns 200 when account config is valid and memory mode is configured", async () => {
     vi.stubEnv("NODE_ENV", "test");
+    stubValidAccountConfig();
     const response = await GET();
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "ok" });
@@ -25,6 +30,7 @@ describe("GET /health/ready", () => {
 
   it("returns 503 without leaking error detail when the session-store configuration is invalid", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    stubValidAccountConfig();
     // Production requires LEVEL5_WEB_SESSION_STORE=redis - left unset here to fail closed.
     const response = await GET();
     expect(response.status).toBe(503);
@@ -35,6 +41,7 @@ describe("GET /health/ready", () => {
 
   it("returns 503 when redis is selected but unreachable", async () => {
     vi.stubEnv("NODE_ENV", "test");
+    stubValidAccountConfig();
     vi.stubEnv("LEVEL5_WEB_SESSION_STORE", "redis");
     // Loopback with nothing listening - a fast, deterministic connection failure.
     vi.stubEnv("LEVEL5_WEB_SESSION_REDIS_URL", "redis://127.0.0.1:1");
@@ -48,4 +55,38 @@ describe("GET /health/ready", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ status: "unavailable" });
   }, 10_000);
+
+  describe("account runtime configuration (issue #6 remediation)", () => {
+    it("returns 503 without leaking error detail when LEVEL5_V2_API_BASE_URL is missing", async () => {
+      vi.stubEnv("NODE_ENV", "test");
+      vi.stubEnv("LEVEL5_APP_ORIGIN", "https://app.example");
+      // LEVEL5_V2_API_BASE_URL deliberately left unset.
+
+      const response = await GET();
+      expect(response.status).toBe(503);
+      const body = (await response.json()) as Record<string, unknown>;
+      expect(body).toEqual({ status: "unavailable" });
+      expect(JSON.stringify(body)).not.toMatch(/LEVEL5_V2_API_BASE_URL/);
+    });
+
+    it("returns 503 without leaking error detail when LEVEL5_APP_ORIGIN is missing", async () => {
+      vi.stubEnv("NODE_ENV", "test");
+      vi.stubEnv("LEVEL5_V2_API_BASE_URL", "https://backend.example");
+      // LEVEL5_APP_ORIGIN deliberately left unset.
+
+      const response = await GET();
+      expect(response.status).toBe(503);
+      const body = (await response.json()) as Record<string, unknown>;
+      expect(body).toEqual({ status: "unavailable" });
+      expect(JSON.stringify(body)).not.toMatch(/LEVEL5_APP_ORIGIN/);
+    });
+
+    it("never reaches Backend V2 - missing account config is detected without a network call", async () => {
+      vi.stubEnv("NODE_ENV", "test");
+      // Both account config vars unset; a valid memory-mode session store is otherwise ready.
+      const response = await GET();
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ status: "unavailable" });
+    });
+  });
 });

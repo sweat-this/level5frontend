@@ -129,6 +129,18 @@ describe("backend-v2 resource clients", () => {
       );
     });
 
+    it("getMyProfile targets the additive /me/profile route and retries", async () => {
+      await players.getMyProfile("token");
+      expect(requestMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "GET",
+          path: "/api/v2/players/me/profile",
+          accessToken: "token",
+          retry: SAFE_READ_RETRY_POLICY,
+        }),
+      );
+    });
+
     it("updateMyProfile is a mutation - no retry", async () => {
       await players.updateMyProfile("New Name", "token");
       expect(requestMock).toHaveBeenCalledWith(

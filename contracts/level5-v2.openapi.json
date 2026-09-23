@@ -463,6 +463,137 @@
         }
       }
     },
+    "/api/v2/leaderboards/{modeId}": {
+      "get": {
+        "tags": [
+          "Leaderboards"
+        ],
+        "parameters": [
+          {
+            "name": "modeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hardcore",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "traffic",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "enemies",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "sniper",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderboardPageDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderboardPageDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderboardPageDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/match-results": {
+      "post": {
+        "tags": [
+          "MatchResults"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitMatchResultDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitMatchResultDto"
+              }
+            },
+            "application/*\u002Bjson": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitMatchResultDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchResultResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchResultResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchResultResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/players/by-tag/{tag}": {
       "get": {
         "tags": [
@@ -556,6 +687,35 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerProfileResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerProfileResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerProfileResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/players/me/profile": {
+      "get": {
+        "tags": [
+          "Players"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1418,6 +1578,67 @@
         },
         "additionalProperties": false
       },
+      "LeaderboardEntryDto": {
+        "type": "object",
+        "properties": {
+          "matchResultId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "player": {
+            "$ref": "#/components/schemas/PublicPlayerSummaryDto"
+          },
+          "characterId": {
+            "type": "string"
+          },
+          "levelId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "value": {
+            "type": "number",
+            "format": "double"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modifiers": {
+            "$ref": "#/components/schemas/MatchResultModifiersDto"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LeaderboardPageDto": {
+        "type": "object",
+        "properties": {
+          "modeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "metric": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaderboardEntryDto"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "LoginRequestDto": {
         "type": "object",
         "properties": {
@@ -1435,6 +1656,73 @@
         "properties": {
           "refreshToken": {
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MatchResultModifiersDto": {
+        "type": "object",
+        "properties": {
+          "hardcore": {
+            "type": "boolean"
+          },
+          "trafficEnabled": {
+            "type": "boolean"
+          },
+          "enemiesEnabled": {
+            "type": "boolean"
+          },
+          "sniperEnabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MatchResultResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "playerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientResultId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "levelId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "characterId": {
+            "type": "string"
+          },
+          "clientVersion": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "modifiers": {
+            "$ref": "#/components/schemas/MatchResultModifiersDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "additionalProperties": false
@@ -1694,6 +1982,43 @@
         },
         "additionalProperties": false
       },
+      "SubmitMatchResultDto": {
+        "type": "object",
+        "properties": {
+          "clientResultId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "levelId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "characterId": {
+            "type": "string"
+          },
+          "clientVersion": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "modifiers": {
+            "$ref": "#/components/schemas/MatchResultModifiersDto"
+          }
+        },
+        "additionalProperties": false
+      },
       "UpdatePlayerProfileRequestDto": {
         "type": "object",
         "properties": {
@@ -1714,6 +2039,12 @@
     },
     {
       "name": "Friends"
+    },
+    {
+      "name": "Leaderboards"
+    },
+    {
+      "name": "MatchResults"
     },
     {
       "name": "Players"

@@ -10,16 +10,13 @@ import {
   RATE_LIMITED_MESSAGE,
   SESSION_STORE_UNAVAILABLE_MESSAGE,
   UNKNOWN_FAILURE_MESSAGE,
+  withReference,
 } from "@/lib/account/outcome-messages";
 import { sanitizeAccountReturnTo } from "@/lib/account/return-to";
 import { getAccountRuntimeConfig } from "@/lib/web-auth/config";
 import { isAllowedOrigin } from "@/lib/web-auth/origin-policy";
 import { tryGetWebSessionCoordinator } from "@/lib/web-auth/session-coordinator-runtime";
 import type { RegisterResult } from "@/lib/web-auth/web-session-coordinator";
-
-function withReference(message: string, traceId: string | undefined): string {
-  return traceId ? `${message} (Reference: ${traceId})` : message;
-}
 
 function registerFailureMessage(
   result: Exclude<RegisterResult, { kind: "success" }>,

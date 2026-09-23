@@ -503,6 +503,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/leaderboards/{modeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                    hardcore?: boolean;
+                    traffic?: boolean;
+                    enemies?: boolean;
+                    sniper?: boolean;
+                };
+                header?: never;
+                path: {
+                    modeId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["LeaderboardPageDto"];
+                        "application/json": components["schemas"]["LeaderboardPageDto"];
+                        "text/json": components["schemas"]["LeaderboardPageDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/match-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SubmitMatchResultDto"];
+                    "text/json": components["schemas"]["SubmitMatchResultDto"];
+                    "application/*+json": components["schemas"]["SubmitMatchResultDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MatchResultResponseDto"];
+                        "application/json": components["schemas"]["MatchResultResponseDto"];
+                        "text/json": components["schemas"]["MatchResultResponseDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/players/by-tag/{tag}": {
         parameters: {
             query?: never;
@@ -604,6 +693,43 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/v2/players/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlayerProfileResponseDto"];
+                        "application/json": components["schemas"]["PlayerProfileResponseDto"];
+                        "text/json": components["schemas"]["PlayerProfileResponseDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v2/series": {
@@ -1180,12 +1306,62 @@ export interface components {
             yourAttempt?: components["schemas"]["AttemptViewDto"];
             opponentAttempt?: components["schemas"]["AttemptViewDto"];
         };
+        LeaderboardEntryDto: {
+            /** Format: uuid */
+            matchResultId?: string;
+            player?: components["schemas"]["PublicPlayerSummaryDto"];
+            characterId?: string;
+            /** Format: int32 */
+            levelId?: number;
+            /** Format: double */
+            value?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            modifiers?: components["schemas"]["MatchResultModifiersDto"];
+        };
+        LeaderboardPageDto: {
+            /** Format: int32 */
+            modeId?: number;
+            metric?: string;
+            direction?: string;
+            items?: components["schemas"]["LeaderboardEntryDto"][];
+            /** Format: int32 */
+            limit?: number;
+            nextCursor?: string | null;
+        };
         LoginRequestDto: {
             username?: string;
             password?: string;
         };
         LogoutRequestDto: {
             refreshToken?: string;
+        };
+        MatchResultModifiersDto: {
+            hardcore?: boolean;
+            trafficEnabled?: boolean;
+            enemiesEnabled?: boolean;
+            sniperEnabled?: boolean;
+        };
+        MatchResultResponseDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            playerId?: string;
+            /** Format: uuid */
+            clientResultId?: string;
+            /** Format: int32 */
+            modeId?: number;
+            /** Format: int32 */
+            levelId?: number;
+            characterId?: string;
+            clientVersion?: string;
+            platform?: string;
+            metrics?: {
+                [key: string]: number;
+            };
+            modifiers?: components["schemas"]["MatchResultModifiersDto"];
+            /** Format: date-time */
+            createdAt?: string;
         };
         PlayerProfileResponseDto: {
             /** Format: uuid */
@@ -1287,6 +1463,21 @@ export interface components {
             /** Format: int32 */
             limit?: number;
             nextCursor?: string | null;
+        };
+        SubmitMatchResultDto: {
+            /** Format: uuid */
+            clientResultId?: string;
+            /** Format: int32 */
+            modeId?: number;
+            /** Format: int32 */
+            levelId?: number;
+            characterId?: string;
+            clientVersion?: string;
+            platform?: string;
+            metrics?: {
+                [key: string]: number;
+            };
+            modifiers?: components["schemas"]["MatchResultModifiersDto"];
         };
         UpdatePlayerProfileRequestDto: {
             displayName?: string;

@@ -23,3 +23,25 @@ export const ORIGIN_REJECTED_MESSAGE =
   "Your request could not be verified. Please reload the page and try again.";
 
 export const MISSING_FIELDS_MESSAGE = "Please fill in all required fields.";
+
+// Issue #7's profile/player-lookup failure messages - shared, fixed, safe strings, same
+// convention as the login/registration messages above.
+
+export const LOGIN_REQUIRED_MESSAGE = "Please log in to continue.";
+
+export const THROTTLED_MESSAGE =
+  "Too many attempts. Please wait a moment and try again.";
+
+export const TEMPORARY_UNAVAILABLE_MESSAGE =
+  "This isn't available right now. Please try again shortly.";
+
+export const PROFILE_UNAVAILABLE_MESSAGE =
+  "Your profile couldn't be loaded right now. Please try again shortly.";
+
+/** Appends a trace/reference id to an otherwise-generic message, when one is available. */
+export function withReference(
+  message: string,
+  traceId: string | undefined,
+): string {
+  return traceId ? `${message} (Reference: ${traceId})` : message;
+}
