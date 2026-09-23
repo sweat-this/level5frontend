@@ -1,0 +1,6 @@
+{
+  "backendRepository": "sweat-this/Level5Backend",
+  "backendRef": "feature/issue-4-openapi-contracts",
+  "backendCommit": "cfdabcbb3d777218d2e8066b312ffcfa15eeda6c",
+  "canonicalPath": "v2/openapi/level5-v2.openapi.json"
+}
