@@ -349,9 +349,13 @@ export async function request<T>(
 }
 
 function decodeSuccess<T>(raw: RawResponse): TransportResult<T> {
-  if (raw.status === 204 || raw.bodyText.length === 0) {
-    // No body expected/received - callers that need a payload here get `undefined`, which only
-    // type-checks as T when the resource client declared a void/undefined success type.
+  if (raw.status === 204) {
+    // The only status Backend V2 ever sends with an intentionally empty body (logout,
+    // accept/decline/cancel/remove - see the resource clients). A 200 is never intentionally
+    // empty, so it falls through to the JSON checks below and comes back invalid_response
+    // instead of a false "success" with undefined data - see issue #4 review Problem 1: an
+    // empty 200 for login/refresh was previously accepted as success, producing a session with
+    // Date.parse(undefined) => NaN, which isAccessTokenExpired treats as never-expiring.
     return { kind: "success", status: raw.status, data: undefined as T };
   }
 

@@ -77,6 +77,22 @@ describe("BackendAuthClient", () => {
         kind: "unknown_failure",
       });
     });
+
+    it("classifies a 200 with a genuinely empty body as unknown_failure, never a success with undefined credentials", async () => {
+      // Regression test for issue #4 review Problem 1: a malformed 200 (empty body) must never
+      // reach WebSessionCoordinator as { kind: "success", credentials: undefined } - that would
+      // create a session whose accessTokenExpiresAt is NaN, which is treated as never-expiring.
+      fetchMock.mockResolvedValue(
+        new Response(null, {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+      const client = new BackendAuthClient(BASE_URL);
+      expect(await client.login("user", "pass")).toEqual({
+        kind: "unknown_failure",
+      });
+    });
   });
 
   describe("refresh", () => {
@@ -164,6 +180,16 @@ describe("BackendAuthClient", () => {
       expect(await client.getMe("access-token")).toEqual({
         kind: "unavailable",
       });
+    });
+
+    it("does not retry on a transient failure - stays fail-fast like issue #3 (issue #4 review Problem 2)", async () => {
+      // WebSessionCoordinator.getMe can already call this twice in one logical request (once,
+      // then again after a coordinated refresh); a retrying /me would multiply that path's
+      // worst-case latency well past what issue #3 certified.
+      fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
+      const client = new BackendAuthClient(BASE_URL);
+      await client.getMe("access-token");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
     it("classifies a network failure as unavailable, not unauthorized", async () => {

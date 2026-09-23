@@ -79,16 +79,31 @@ describe("backend-v2 resource clients", () => {
     });
   });
 
-  it("account.getCurrentAccount is a safe read with the bounded retry policy", async () => {
-    await account.getCurrentAccount("token");
-    expect(requestMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "GET",
-        path: "/api/v2/me",
-        accessToken: "token",
+  describe("account.getCurrentAccount", () => {
+    it("does not retry unless the caller explicitly opts in (BackendAuthClient.getMe relies on this)", async () => {
+      await account.getCurrentAccount("token");
+      expect(requestMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "GET",
+          path: "/api/v2/me",
+          accessToken: "token",
+        }),
+      );
+      expect(lastCallOptions().retry).toBeUndefined();
+    });
+
+    it("uses the caller-supplied retry policy when one is passed", async () => {
+      await account.getCurrentAccount("token", {
         retry: SAFE_READ_RETRY_POLICY,
-      }),
-    );
+      });
+      expect(requestMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "GET",
+          path: "/api/v2/me",
+          retry: SAFE_READ_RETRY_POLICY,
+        }),
+      );
+    });
   });
 
   describe("players", () => {

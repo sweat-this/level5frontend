@@ -59,6 +59,15 @@ if [[ -z "${backend_repository}" ]]; then
   backend_repository="sweat-this/Level5Backend"
 fi
 
+# Warn (not fail) if nobody else could actually fetch this commit - e.g. it only exists on an
+# unpushed local branch. source.json's whole purpose is letting someone else reproduce/debug the
+# snapshot from it later, which silently stops being true if the pin points at local-only work
+# (issue #4 review Problem 3).
+if [[ -z "$(git -C "${backend_repo}" branch -r --contains "${commit_sha}" 2>/dev/null)" ]]; then
+  echo "Warning: ${commit_sha} is not reachable from any remote-tracking branch in ${backend_repo}." >&2
+  echo "         Push it first, or this pin won't be reproducible from source.json alone." >&2
+fi
+
 git -C "${backend_repo}" show "${commit_sha}:${canonical_path}" > "${frontend_root}/contracts/level5-v2.openapi.json"
 
 cat > "${frontend_root}/contracts/level5-v2.source.json" <<EOF

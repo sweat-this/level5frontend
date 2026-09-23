@@ -285,6 +285,39 @@ describe("transport", () => {
         error: { kind: "invalid_response", httpStatus: 200 },
       });
     });
+
+    it("classifies a 200 with a genuinely empty body as invalid_response, not a false success (issue #4 review Problem 1)", async () => {
+      // Backend V2 only ever sends an empty body on 204 (logout/accept/decline/cancel/remove).
+      // A 200 is never intentionally empty, so this must not be treated the same as a real 204 -
+      // doing so previously let a malformed login/refresh response through as
+      // { kind: "success", data: undefined }, corrupting the session (Date.parse(undefined) is
+      // NaN, which isAccessTokenExpired then treats as never-expiring).
+      fetchMock.mockResolvedValue(
+        new Response(null, {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+      const result = await request({
+        method: "POST",
+        path: "/x",
+        baseUrl: BASE_URL,
+      });
+      expect(result).toEqual({
+        kind: "error",
+        error: { kind: "invalid_response", httpStatus: 200 },
+      });
+    });
+
+    it("still treats a 204 as a real, intentional success with no payload", async () => {
+      fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+      const result = await request({
+        method: "POST",
+        path: "/x",
+        baseUrl: BASE_URL,
+      });
+      expect(result).toEqual({ kind: "success", status: 204, data: undefined });
+    });
   });
 
   describe("retry", () => {

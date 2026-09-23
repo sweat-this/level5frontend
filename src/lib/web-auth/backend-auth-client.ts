@@ -123,11 +123,11 @@ export class BackendAuthClient implements AuthBackendPort {
   }
 
   async getMe(accessToken: string): Promise<MeOutcome> {
-    const result = await accountResource.getCurrentAccount(
-      accessToken,
-      undefined,
-      this.baseUrl,
-    );
+    // No retry (issue #4 review Problem 2): this is issue #3's fail-fast /me check, and
+    // WebSessionCoordinator.getMe can already call it twice in one logical request.
+    const result = await accountResource.getCurrentAccount(accessToken, {
+      baseUrl: this.baseUrl,
+    });
     if (result.kind === "success") {
       return { kind: "success", account: result.data };
     }
