@@ -1,4 +1,4 @@
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
@@ -7,3 +7,11 @@ import '@testing-library/jest-dom/vitest';
 afterEach(() => {
   cleanup();
 });
+
+// The `server-only` package throws on import unless resolved under React's
+// "react-server" condition (see node_modules/server-only/index.js), which plain vitest
+// doesn't set up. Every test run is effectively "server" context here - there's no
+// Client Component bundle under test - so this mirrors what that condition would
+// resolve to (an empty module) rather than disabling the real safeguard Next's build
+// still enforces.
+vi.mock('server-only', () => ({}));
