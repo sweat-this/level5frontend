@@ -5,9 +5,10 @@ import type { WebSessionStore } from "./web-session-store";
 /**
  * Development/test only. A process-local Map: does not survive restarts and is not
  * shared across horizontally scaled instances, so it must never back production
- * authentication (see src/lib/web-auth/config.ts, which forces certification routes
- * off in production regardless of configuration). Issue #5 owns the shared,
- * persistent, encrypted-at-rest replacement.
+ * authentication (see src/lib/web-auth/session-store-config.ts, which fails closed if
+ * production configuration doesn't explicitly select RedisWebSessionStore). Kept
+ * alongside RedisWebSessionStore (issue #5) for fast, dependency-free unit tests and
+ * local development where LEVEL5_WEB_SESSION_STORE=memory is explicitly selected.
  */
 export class MemoryWebSessionStore implements WebSessionStore {
   private readonly sessions = new Map<string, WebSession>();

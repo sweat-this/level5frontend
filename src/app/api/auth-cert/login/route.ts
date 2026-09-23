@@ -13,6 +13,13 @@ interface LoginRequestBody {
   password?: string;
 }
 
+const FAILURE_STATUS: Record<string, number> = {
+  invalid_credentials: 401,
+  rate_limited: 429,
+  unavailable: 503,
+};
+const DEFAULT_FAILURE_STATUS = 502;
+
 // Temporary, explicitly-gated certification surface for issue #3 - not a permanent
 // public API contract. Proves browser -> HttpOnly cookie -> session coordinator ->
 // real Backend V2, without shipping any account/login UI. See
@@ -39,24 +46,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const result = await getCertificationCoordinator().login(
-    body.username,
-    body.password,
-  );
+  const coordinator = await getCertificationCoordinator();
+  const result = await coordinator.login(body.username, body.password);
   if (result.kind !== "success") {
-    const status =
-      result.kind === "invalid_credentials"
-        ? 401
-        : result.kind === "rate_limited"
-          ? 429
-          : 502;
+    const status = FAILURE_STATUS[result.kind] ?? DEFAULT_FAILURE_STATUS;
     return NextResponse.json(
       { error: result.kind },
       { status, headers: NO_STORE },
     );
   }
 
-  const cookie = buildSessionCookie(result.sessionId);
+  const cookie = buildSessionCookie(result.sessionId, result.absoluteExpiresAt);
   const cookieStore = await cookies();
   cookieStore.set(cookie.name, cookie.value, {
     httpOnly: cookie.httpOnly,

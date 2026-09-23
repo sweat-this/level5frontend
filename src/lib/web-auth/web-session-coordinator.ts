@@ -4,19 +4,26 @@ import type {
   AuthBackendPort,
   CurrentAccountResponseDto,
 } from "./backend-auth-client";
+import { recordSessionEvent } from "./session-observability";
 import { generateSessionId, hashSessionId } from "./session-id";
+import { SessionStoreUnavailableError } from "./session-store-errors";
 import {
   isAccessTokenExpired,
   isRefreshLeaseExpired,
+  nextAbsoluteExpiresAt,
   type WebSession,
 } from "./web-session";
 import type { WebSessionStore } from "./web-session-store";
 
 export type LoginResult =
-  | { kind: "success"; sessionId: string }
+  | { kind: "success"; sessionId: string; absoluteExpiresAt: number }
   | { kind: "invalid_credentials" }
   | { kind: "rate_limited" }
-  | { kind: "unknown_failure" };
+  | { kind: "unknown_failure" }
+  // Backend V2 login succeeded (a real refresh session now exists there) but the shared store
+  // couldn't durably record our side of it - see login()'s orphan-session handling below. Never
+  // a cookie/sessionId in this case.
+  | { kind: "unavailable" };
 
 export type AccessTokenResult =
   | { kind: "ready"; accessToken: string }
@@ -25,7 +32,11 @@ export type AccessTokenResult =
   // the existing refresh credential is still good; this is a transient condition, not
   // an auth failure. See Problem 5.
   | { kind: "throttled" }
-  | { kind: "not_found" };
+  | { kind: "not_found" }
+  // The shared session store's outcome was genuinely unknown (timeout/connection failure) at a
+  // point where guessing would be unsafe - see docs/architecture/web-authentication.md's
+  // "Coordinator Failure Hardening" section.
+  | { kind: "unavailable" };
 
 export type MeResult =
   | { kind: "success"; account: CurrentAccountResponseDto }
@@ -52,20 +63,36 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+/** True only for the one error type a WebSessionStore is allowed to throw - see its JSDoc. */
+function isStoreUnavailable(err: unknown): err is SessionStoreUnavailableError {
+  return err instanceof SessionStoreUnavailableError;
+}
+
 function credentialsToReadySession(
   sessionIdHash: string,
   credentials: AccessTokenResponseDto,
   revision: number,
+  now: number,
+  previous: { createdAt: number; absoluteExpiresAt: number } | null,
 ): WebSession {
+  const refreshTokenExpiresAt = Date.parse(credentials.refreshTokenExpiresAt);
   return {
     sessionIdHash,
     accessToken: credentials.accessToken,
     accessTokenExpiresAt: Date.parse(credentials.expiresAt),
     refreshToken: credentials.refreshToken,
-    refreshTokenExpiresAt: Date.parse(credentials.refreshTokenExpiresAt),
+    refreshTokenExpiresAt,
     revision,
     refreshState: "Ready",
     refreshLeaseExpiresAt: null,
+    createdAt: previous?.createdAt ?? now,
+    // The fixed absolute web-session lifetime rule (issue #5): never extended, only ever
+    // shortened to the earlier of the existing deadline and this rotation's own refresh-token
+    // expiry. See web-session.ts's nextAbsoluteExpiresAt doc comment.
+    absoluteExpiresAt: nextAbsoluteExpiresAt(
+      previous?.absoluteExpiresAt,
+      refreshTokenExpiresAt,
+    ),
   };
 }
 
@@ -75,6 +102,12 @@ function credentialsToReadySession(
  * primitive is WebSessionStore.compareAndSwap; no in-process lock is used or required,
  * so two coordinators sharing one store behave correctly under concurrency (see the
  * concurrency test and docs/architecture/web-authentication.md).
+ *
+ * Every WebSessionStore call here is wrapped so a `SessionStoreUnavailableError` (a real,
+ * networked store's outcome-unknown case - see web-session-store.ts) never gets treated as a
+ * definite result. This distinction didn't matter against MemoryWebSessionStore, which made
+ * persistence effectively certain - it matters once RedisWebSessionStore (issue #5) is the store
+ * in play.
  */
 export class WebSessionCoordinator {
   private readonly now: () => number;
@@ -106,27 +139,95 @@ export class WebSessionCoordinator {
 
     const sessionId = generateSessionId();
     const sessionIdHash = hashSessionId(sessionId);
-    await this.store.create(
-      credentialsToReadySession(sessionIdHash, outcome.credentials, 1),
+    const session = credentialsToReadySession(
+      sessionIdHash,
+      outcome.credentials,
+      1,
+      this.now(),
+      null,
     );
-    return { kind: "success", sessionId };
+
+    try {
+      await this.store.create(session);
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      recordSessionEvent("session_store_unavailable", {
+        operation: "login_create",
+      });
+      // Orphan-session guard: Backend V2 already issued a real, one-time-rotating refresh
+      // session. If we can't durably record our side of it, we must not hand the browser a
+      // cookie for a session we can't track - and we must not leave that Backend credential
+      // dangling either (best-effort; BackendAuthClient.logout never throws).
+      await this.backend.logout(outcome.credentials.refreshToken);
+      return { kind: "unavailable" };
+    }
+
+    recordSessionEvent("session_created");
+    return {
+      kind: "success",
+      sessionId,
+      absoluteExpiresAt: session.absoluteExpiresAt,
+    };
   }
 
+  /**
+   * Never throws - local invalidation (the caller's cookie) must not depend on remote cleanup
+   * succeeding. Best-effort Backend V2 revocation and store deletion each independently report a
+   * diagnostic event on failure rather than propagate (see
+   * docs/architecture/web-authentication.md's logout-failure semantics).
+   */
   async logout(sessionId: string): Promise<void> {
     const sessionIdHash = hashSessionId(sessionId);
-    const session = await this.store.find(sessionIdHash);
-    if (session) {
-      // Best-effort - BackendAuthClient.logout never throws. Local invalidation below
-      // always runs regardless of the backend outcome (Problem: logout must not leave
-      // the browser locally authenticated even if Backend V2 is unreachable).
-      await this.backend.logout(session.refreshToken);
+
+    let session: WebSession | null;
+    try {
+      session = await this.store.find(sessionIdHash);
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      recordSessionEvent("session_store_unavailable", {
+        operation: "logout_find",
+      });
+      return;
     }
-    await this.store.delete(sessionIdHash);
+
+    if (session) {
+      // Best-effort - BackendAuthClient.logout never throws.
+      const revoked = await this.backend.logout(session.refreshToken);
+      if (!revoked) {
+        recordSessionEvent("logout_backend_revoke_failed");
+      }
+    }
+
+    try {
+      await this.store.delete(sessionIdHash);
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      recordSessionEvent("session_store_unavailable", {
+        operation: "logout_delete",
+      });
+    }
   }
 
   async getAccessToken(sessionId: string): Promise<AccessTokenResult> {
     const sessionIdHash = hashSessionId(sessionId);
-    const session = await this.store.find(sessionIdHash);
+    let session: WebSession | null;
+    try {
+      session = await this.store.find(sessionIdHash);
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      recordSessionEvent("session_store_unavailable", {
+        operation: "get_access_token",
+      });
+      return { kind: "unavailable" };
+    }
     if (!session) {
       return { kind: "not_found" };
     }
@@ -135,7 +236,19 @@ export class WebSessionCoordinator {
 
   async getMe(sessionId: string): Promise<MeResult> {
     const sessionIdHash = hashSessionId(sessionId);
-    const initialSession = await this.store.find(sessionIdHash);
+
+    let initialSession: WebSession | null;
+    try {
+      initialSession = await this.store.find(sessionIdHash);
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      recordSessionEvent("session_store_unavailable", {
+        operation: "get_me_initial",
+      });
+      return { kind: "unavailable" };
+    }
     if (!initialSession) {
       return { kind: "not_found" };
     }
@@ -175,7 +288,18 @@ export class WebSessionCoordinator {
 
     // The token was locally valid but Backend V2 disagreed: one coordinated refresh,
     // then retry /me once. Never loop past this single retry (Problem 15).
-    const session = await this.store.find(sessionIdHash);
+    let session: WebSession | null;
+    try {
+      session = await this.store.find(sessionIdHash);
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      recordSessionEvent("session_store_unavailable", {
+        operation: "get_me_retry",
+      });
+      return { kind: "unavailable" };
+    }
     if (!session) {
       return { kind: "not_found" };
     }
@@ -205,9 +329,18 @@ export class WebSessionCoordinator {
   private async requireReauthentication(
     sessionIdHash: string,
   ): Promise<MeResult> {
-    const current = await this.store.find(sessionIdHash);
-    if (current) {
-      await this.transitionToReauthRequired(sessionIdHash, current);
+    try {
+      const current = await this.store.find(sessionIdHash);
+      if (current) {
+        await this.transitionToReauthRequired(sessionIdHash, current);
+      }
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      recordSessionEvent("session_store_unavailable", {
+        operation: "require_reauth",
+      });
     }
     return { kind: "reauthentication_required" };
   }
@@ -268,7 +401,16 @@ export class WebSessionCoordinator {
           result: await this.performRefresh(sessionIdHash, claim.session),
         };
       }
-      // Someone else claimed it between our find() and this CAS - reload and rejoin.
+      if (claim.kind === "unavailable") {
+        // Per issue #5: never guess that a claim whose outcome is unknown actually failed. Don't
+        // call Backend V2 refresh, don't loop - a later request reloads the shared store once
+        // it's reachable again and determines the real state.
+        recordSessionEvent("refresh_outcome_unknown", { stage: "claim" });
+        return { kind: "done", result: { kind: "unavailable" } };
+      }
+      // claim.kind === "lost": someone else claimed it between our find() and this CAS - reload
+      // and rejoin as a waiter.
+      recordSessionEvent("refresh_claim_lost");
       return this.reloadForRetry(sessionIdHash);
     }
 
@@ -290,7 +432,18 @@ export class WebSessionCoordinator {
     | { kind: "retry"; session: WebSession }
     | { kind: "done"; result: AccessTokenResult }
   > {
-    const reloaded = await this.store.find(sessionIdHash);
+    let reloaded: WebSession | null;
+    try {
+      reloaded = await this.store.find(sessionIdHash);
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      recordSessionEvent("session_store_unavailable", {
+        operation: "reload_for_retry",
+      });
+      return { kind: "done", result: { kind: "unavailable" } };
+    }
     return reloaded
       ? { kind: "retry", session: reloaded }
       : { kind: "done", result: { kind: "not_found" } };
@@ -299,21 +452,82 @@ export class WebSessionCoordinator {
   private async claimRefresh(
     sessionIdHash: string,
     session: WebSession,
-  ): Promise<{ kind: "claimed"; session: WebSession } | { kind: "lost" }> {
+  ): Promise<
+    | { kind: "claimed"; session: WebSession }
+    | { kind: "lost" }
+    | { kind: "unavailable" }
+  > {
     const refreshingSession: WebSession = {
       ...session,
       refreshState: "Refreshing",
       revision: session.revision + 1,
       refreshLeaseExpiresAt: this.now() + this.refreshLeaseMs,
     };
-    const won = await this.store.compareAndSwap(
-      sessionIdHash,
-      session.revision,
-      refreshingSession,
-    );
-    return won
-      ? { kind: "claimed", session: refreshingSession }
-      : { kind: "lost" };
+    try {
+      const won = await this.store.compareAndSwap(
+        sessionIdHash,
+        session.revision,
+        refreshingSession,
+      );
+      return won
+        ? { kind: "claimed", session: refreshingSession }
+        : { kind: "lost" };
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      return { kind: "unavailable" };
+    }
+  }
+
+  /**
+   * Issues one CAS write and confirms it actually landed, tolerating an ambiguous store
+   * response - used only where the caller must never report success (a rotated Backend V2
+   * credential as ready, or a 429 rollback as complete) without durable confirmation. A definite
+   * CAS-false ("lost") shouldn't normally happen here, since the caller always holds the
+   * exclusive claim it's replacing - handled conservatively rather than assumed benign.
+   */
+  private async casWithConfirmation(
+    sessionIdHash: string,
+    expectedRevision: number,
+    replacement: WebSession,
+  ): Promise<"landed" | "lost" | "unavailable"> {
+    let outcome: boolean | "ambiguous";
+    try {
+      outcome = await this.store.compareAndSwap(
+        sessionIdHash,
+        expectedRevision,
+        replacement,
+      );
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      outcome = "ambiguous";
+    }
+    if (outcome === true) {
+      return "landed";
+    }
+    if (outcome === false) {
+      return "lost";
+    }
+
+    // Ambiguous: the write may or may not have landed. Reload and verify - never assume success
+    // just because the store call itself has since become unreachable.
+    let reloaded: WebSession | null;
+    try {
+      reloaded = await this.store.find(sessionIdHash);
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      return "unavailable";
+    }
+    const landed =
+      reloaded !== null &&
+      reloaded.revision === replacement.revision &&
+      reloaded.refreshState === replacement.refreshState;
+    return landed ? "landed" : "unavailable";
   }
 
   private async performRefresh(
@@ -327,16 +541,34 @@ export class WebSessionCoordinator {
         sessionIdHash,
         outcome.credentials,
         refreshingSession.revision + 1,
+        this.now(),
+        {
+          createdAt: refreshingSession.createdAt,
+          absoluteExpiresAt: refreshingSession.absoluteExpiresAt,
+        },
       );
-      await this.store.compareAndSwap(
+      const confirmation = await this.casWithConfirmation(
         sessionIdHash,
         refreshingSession.revision,
         readySession,
       );
-      return { kind: "ready", accessToken: readySession.accessToken };
+      if (confirmation === "landed") {
+        recordSessionEvent("refresh_success");
+        return { kind: "ready", accessToken: readySession.accessToken };
+      }
+      if (confirmation === "unavailable") {
+        // Never hand back a rotated credential as usable until it's known to be durably
+        // persisted (issue #5's central rule). A later request reloads and discovers the real
+        // state once the store is reachable again.
+        recordSessionEvent("refresh_outcome_unknown", { stage: "finalize" });
+        return { kind: "unavailable" };
+      }
+      await this.transitionToReauthRequired(sessionIdHash, refreshingSession);
+      return { kind: "reauthentication_required" };
     }
 
     if (outcome.kind === "invalid") {
+      recordSessionEvent("refresh_invalid");
       await this.transitionToReauthRequired(sessionIdHash, refreshingSession);
       return { kind: "reauthentication_required" };
     }
@@ -350,21 +582,38 @@ export class WebSessionCoordinator {
         revision: refreshingSession.revision + 1,
         refreshLeaseExpiresAt: null,
       };
-      await this.store.compareAndSwap(
+      const confirmation = await this.casWithConfirmation(
         sessionIdHash,
         refreshingSession.revision,
         rolledBack,
       );
-      return { kind: "throttled" };
+      if (confirmation === "landed") {
+        return { kind: "throttled" };
+      }
+      if (confirmation === "unavailable") {
+        // Same durability rule as the success path: don't report "throttled" (implying the
+        // existing refresh token is safely usable again) until the rollback is confirmed.
+        recordSessionEvent("refresh_outcome_unknown", { stage: "rollback" });
+        return { kind: "unavailable" };
+      }
+      await this.transitionToReauthRequired(sessionIdHash, refreshingSession);
+      return { kind: "reauthentication_required" };
     }
 
     // outcome.kind === "unknown_failure": timeout, connection loss, or an ambiguous
     // 5xx. The refresh may or may not have landed on the backend, so this refresh
     // token can never be retried (Problem 4).
+    recordSessionEvent("refresh_outcome_unknown", { stage: "backend_call" });
     await this.transitionToReauthRequired(sessionIdHash, refreshingSession);
     return { kind: "reauthentication_required" };
   }
 
+  /**
+   * Best-effort: swallows a store-unavailable outcome rather than propagating it. Safe because
+   * the security invariant this protects ("never reuse this refresh token") is already enforced
+   * by the caller's own return value; a later reader that finds this session still "Refreshing"
+   * past its lease independently redoes this same transition (see advanceRefresh).
+   */
   private async transitionToReauthRequired(
     sessionIdHash: string,
     session: WebSession,
@@ -375,6 +624,15 @@ export class WebSessionCoordinator {
       revision: session.revision + 1,
       refreshLeaseExpiresAt: null,
     };
-    await this.store.compareAndSwap(sessionIdHash, session.revision, next);
+    try {
+      await this.store.compareAndSwap(sessionIdHash, session.revision, next);
+    } catch (err) {
+      if (!isStoreUnavailable(err)) {
+        throw err;
+      }
+      recordSessionEvent("session_store_unavailable", {
+        operation: "transition_reauth",
+      });
+    }
   }
 }

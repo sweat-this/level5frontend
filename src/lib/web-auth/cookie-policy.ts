@@ -5,10 +5,6 @@ export const DEV_COOKIE_NAME = "level5_session";
 // setting a domain and always pairing this name with secure: true.
 export const PROD_COOKIE_NAME = "__Host-level5_session";
 
-// Long enough to outlive Backend V2's refresh-token lifetime so the browser doesn't
-// drop the cookie itself before the server-side session does.
-export const SESSION_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
-
 export interface SessionCookie {
   readonly name: string;
   readonly value: string;
@@ -30,11 +26,20 @@ export function sessionCookieName(
   return isProductionCookiePolicy(nodeEnv) ? PROD_COOKIE_NAME : DEV_COOKIE_NAME;
 }
 
+/**
+ * `absoluteExpiresAt` is the session's actual server-side deadline (WebSessionCoordinator's
+ * fixed absolute lifetime - see web-session.ts), not an independent, hard-coded browser
+ * lifetime: the cookie must never outlive the session it names. Max-Age is clamped at zero
+ * rather than going negative for an already-expired deadline.
+ */
 export function buildSessionCookie(
   value: string,
+  absoluteExpiresAt: number,
   nodeEnv: string | undefined = process.env.NODE_ENV,
+  now: () => number = Date.now,
 ): SessionCookie {
   const production = isProductionCookiePolicy(nodeEnv);
+  const maxAge = Math.max(0, Math.floor((absoluteExpiresAt - now()) / 1000));
   return {
     name: production ? PROD_COOKIE_NAME : DEV_COOKIE_NAME,
     value,
@@ -42,7 +47,7 @@ export function buildSessionCookie(
     secure: production,
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
+    maxAge,
   };
 }
 

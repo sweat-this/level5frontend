@@ -24,7 +24,8 @@ export async function GET(): Promise<NextResponse> {
     );
   }
 
-  const result = await getCertificationCoordinator().getMe(sessionId);
+  const coordinator = await getCertificationCoordinator();
+  const result = await coordinator.getMe(sessionId);
 
   if (result.kind === "success") {
     return NextResponse.json(

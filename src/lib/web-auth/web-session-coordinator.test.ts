@@ -23,6 +23,8 @@ function seedSession(overrides: Partial<WebSession> = {}): WebSession {
     revision: 1,
     refreshState: "Ready",
     refreshLeaseExpiresAt: null,
+    createdAt: Date.now(),
+    absoluteExpiresAt: Date.now() + 2_592_000_000,
     ...overrides,
   };
 }

@@ -31,3 +31,37 @@ jobs:
       - run: npm test
 
       - run: npm run build
+
+  redis-integration:
+    runs-on: ubuntu-latest
+    # Exact pinned patch tag - never `latest` or a floating minor - and Redis >=6.2 for SET's
+    # combined NX+PXAT option (see RedisWebSessionStore.create). Kept as a separate job so the
+    # `build` job above never depends on a Redis service and stays fast/dependency-free.
+    services:
+      redis:
+        image: redis:7.4.11-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Runs the whole suite again with real-Redis-gated tests enabled - non-Redis tests are
+      # unaffected by the extra env var, so this doesn't duplicate maintenance of a separate test
+      # file list. See package.json's test:redis script and
+      # src/lib/web-auth/*.redis.test.ts's header comments.
+      - run: npm run test:redis
+        env:
+          LEVEL5_WEB_SESSION_REDIS_URL: redis://localhost:6379
