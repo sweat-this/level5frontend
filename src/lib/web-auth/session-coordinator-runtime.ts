@@ -13,14 +13,28 @@ import { WebSessionCoordinator } from "./web-session-coordinator";
 // entry point - there is no separate/parallel authentication stack.
 let coordinatorPromise: Promise<WebSessionCoordinator> | null = null;
 
+/**
+ * A failed first construction (e.g. Redis unreachable at cold start) must not permanently poison
+ * this process - the next caller needs to retry, not inherit a cached rejected Promise forever
+ * (issue #6 remediation: coordinator recovery). Concurrent cold-start callers still share exactly
+ * one in-flight attempt, since `coordinatorPromise` is assigned before anything is awaited here;
+ * only a *failed* attempt is cleared, and only by the attempt that actually owns the slot - so a
+ * slower, now-stale failure can never clobber a newer attempt that already succeeded.
+ */
 export function getWebSessionCoordinator(): Promise<WebSessionCoordinator> {
   if (!coordinatorPromise) {
     // Validated eagerly, before composition, so misconfiguration fails clearly right here
     // rather than surfacing later as an opaque transport/origin failure.
     getAccountRuntimeConfig();
-    coordinatorPromise = getWebSessionStore().then(
+    const attempt = getWebSessionStore().then(
       (store) => new WebSessionCoordinator(store, new BackendAuthClient()),
     );
+    coordinatorPromise = attempt;
+    attempt.catch(() => {
+      if (coordinatorPromise === attempt) {
+        coordinatorPromise = null;
+      }
+    });
   }
   return coordinatorPromise;
 }

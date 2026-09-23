@@ -17,7 +17,7 @@ export default function LoginForm({ returnTo }: { readonly returnTo: string }) {
   const hasError = state.status === "error";
 
   return (
-    <Stack component="form" action={formAction} spacing={3} noValidate>
+    <Stack component="form" action={formAction} spacing={3}>
       <Typography variant="h4" component="h1">
         Log in
       </Typography>

@@ -35,6 +35,24 @@ export function getMyPlayerId(
   });
 }
 
+/**
+ * Additive self-profile read (issue #7) - distinct from getMyPlayerId()'s bare-GUID `/players/me`,
+ * which the Unity client's existing contract requires staying unchanged. A safe read, so it may
+ * use the same retry policy.
+ */
+export function getMyProfile(
+  accessToken: string,
+  signal?: AbortSignal,
+): Promise<TransportResult<PlayerProfile>> {
+  return request<PlayerProfile>({
+    method: "GET",
+    path: "/api/v2/players/me/profile",
+    accessToken,
+    retry: SAFE_READ_RETRY_POLICY,
+    signal,
+  });
+}
+
 /** Mutation - never retried automatically (issue #11). */
 export function updateMyProfile(
   displayName: string,
