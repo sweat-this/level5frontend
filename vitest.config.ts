@@ -1,6 +1,6 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   // Mirrors tsconfig.json's "@/*" path mapping - Vite/Vitest doesn't read tsconfig paths on its
@@ -14,5 +14,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    // e2e/** holds Playwright specs (issue #6) - a different test runner/config
+    // (playwright.config.ts), never Vitest's own default include glob.
+    exclude: [...configDefaults.exclude, "e2e/**"],
   },
 });

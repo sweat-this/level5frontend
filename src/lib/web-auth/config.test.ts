@@ -1,14 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getWebAuthConfig, resetWebAuthConfigForTests } from "./config";
+import {
+  getAccountRuntimeConfig,
+  getWebAuthConfig,
+  resetAccountRuntimeConfigForTests,
+  resetWebAuthConfigForTests,
+} from "./config";
 
 beforeEach(() => {
   vi.unstubAllEnvs();
   resetWebAuthConfigForTests();
+  resetAccountRuntimeConfigForTests();
 });
 
 afterEach(() => {
   vi.unstubAllEnvs();
   resetWebAuthConfigForTests();
+  resetAccountRuntimeConfigForTests();
 });
 
 describe("getWebAuthConfig", () => {
@@ -53,5 +60,33 @@ describe("getWebAuthConfig", () => {
     vi.stubEnv("NODE_ENV", "development");
 
     expect(() => getWebAuthConfig()).toThrow(/LEVEL5_APP_ORIGIN/);
+  });
+});
+
+describe("getAccountRuntimeConfig", () => {
+  it("throws naming the backend base URL when it is missing, regardless of certification", () => {
+    vi.stubEnv("LEVEL5_V2_API_BASE_URL", "");
+    vi.stubEnv("LEVEL5_APP_ORIGIN", "http://localhost:3000");
+    vi.stubEnv("LEVEL5_AUTH_CERTIFICATION_ENABLED", "");
+
+    expect(() => getAccountRuntimeConfig()).toThrow(/LEVEL5_V2_API_BASE_URL/);
+  });
+
+  it("throws naming the app origin when it is missing, regardless of certification", () => {
+    vi.stubEnv("LEVEL5_V2_API_BASE_URL", "http://localhost:5053");
+    vi.stubEnv("LEVEL5_APP_ORIGIN", "");
+    vi.stubEnv("LEVEL5_AUTH_CERTIFICATION_ENABLED", "");
+
+    expect(() => getAccountRuntimeConfig()).toThrow(/LEVEL5_APP_ORIGIN/);
+  });
+
+  it("returns both values once set, independent of getWebAuthConfig's own cache", () => {
+    vi.stubEnv("LEVEL5_V2_API_BASE_URL", "http://localhost:5053");
+    vi.stubEnv("LEVEL5_APP_ORIGIN", "http://localhost:3000");
+
+    expect(getAccountRuntimeConfig()).toEqual({
+      backendBaseUrl: "http://localhost:5053",
+      appOrigin: "http://localhost:3000",
+    });
   });
 });

@@ -22,6 +22,86 @@ describe("BackendAuthClient", () => {
     vi.unstubAllGlobals();
   });
 
+  describe("register", () => {
+    it("classifies 200 as success and returns the credentials", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(200, {
+          accessToken: "a",
+          expiresAt: "2030-01-01T00:00:00Z",
+          playerId: "p1",
+          refreshToken: "r",
+          refreshTokenExpiresAt: "2030-02-01T00:00:00Z",
+        }),
+      );
+      const client = new BackendAuthClient(BASE_URL);
+      const result = await client.register("user", "password123", "Display");
+
+      expect(result.kind).toBe("success");
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe(`${BASE_URL}/api/v2/auth/register`);
+      expect(init.method).toBe("POST");
+    });
+
+    it("classifies 400 as validation_failed with the safe backend message", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(400, {
+          title:
+            "Username must be 3-32 characters: letters, digits, underscore, or period.",
+          code: "invalid_username",
+          traceId: "trace-1",
+        }),
+      );
+      const client = new BackendAuthClient(BASE_URL);
+      expect(await client.register("u", "password123", "Display")).toEqual({
+        kind: "validation_failed",
+        message:
+          "Username must be 3-32 characters: letters, digits, underscore, or period.",
+        traceId: "trace-1",
+      });
+    });
+
+    it("classifies 409 as conflict with the safe backend message", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(409, {
+          title: "Username is already taken.",
+          code: "username_conflict",
+        }),
+      );
+      const client = new BackendAuthClient(BASE_URL);
+      expect(await client.register("taken", "password123", "Display")).toEqual({
+        kind: "conflict",
+        message: "Username is already taken.",
+        traceId: undefined,
+      });
+    });
+
+    it("classifies 429 as rate_limited", async () => {
+      fetchMock.mockResolvedValue(new Response(null, { status: 429 }));
+      const client = new BackendAuthClient(BASE_URL);
+      expect(await client.register("user", "password123", "Display")).toEqual({
+        kind: "rate_limited",
+      });
+    });
+
+    it("classifies a 5xx as unknown_failure", async () => {
+      fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
+      const client = new BackendAuthClient(BASE_URL);
+      expect(await client.register("user", "password123", "Display")).toEqual({
+        kind: "unknown_failure",
+        traceId: undefined,
+      });
+    });
+
+    it("classifies a network/transport failure as unknown_failure", async () => {
+      fetchMock.mockRejectedValue(new Error("network down"));
+      const client = new BackendAuthClient(BASE_URL);
+      expect(await client.register("user", "password123", "Display")).toEqual({
+        kind: "unknown_failure",
+        traceId: undefined,
+      });
+    });
+  });
+
   describe("login", () => {
     it("classifies 200 as success and returns the credentials", async () => {
       fetchMock.mockResolvedValue(

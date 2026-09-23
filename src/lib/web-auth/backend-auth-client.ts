@@ -24,6 +24,22 @@ export type LoginOutcome =
   | { kind: "rate_limited" }
   | { kind: "unknown_failure" };
 
+/**
+ * Registration's failure modes are shaped differently from login's - Backend V2 never returns
+ * 401 here (see AuthController.Register/RegisterAccountUseCase), it returns 400 for domain
+ * validation (invalid username/password/display name) and 409 for a username conflict, both
+ * with a safe, intentionally user-facing message already proven safe by ApiExceptionHandler.cs
+ * (title is only ever the raw exception message for non-500s) and normalized by
+ * transport.ts's parseProblemDetails. No new safe-message framework is introduced here - the
+ * message is passed straight through.
+ */
+export type RegisterOutcome =
+  | { kind: "success"; credentials: AccessTokenResponseDto }
+  | { kind: "validation_failed"; message: string; traceId?: string }
+  | { kind: "conflict"; message: string; traceId?: string }
+  | { kind: "rate_limited" }
+  | { kind: "unknown_failure"; traceId?: string };
+
 export type RefreshOutcome =
   | { kind: "success"; credentials: AccessTokenResponseDto }
   | { kind: "invalid" }
@@ -40,6 +56,12 @@ export type MeOutcome =
  * an in-memory fake instead of BackendAuthClient's real fetch/timeout machinery.
  */
 export interface AuthBackendPort {
+  register(
+    username: string,
+    password: string,
+    displayName: string,
+    ip?: ClientIpOverride,
+  ): Promise<RegisterOutcome>;
   login(
     username: string,
     password: string,
@@ -73,6 +95,36 @@ function toCredentialOutcome<TInvalidKind extends string>(
   return { kind: "unknown_failure" };
 }
 
+function toRegisterOutcome(
+  result: TransportResult<AccessTokenResponseDto>,
+): RegisterOutcome {
+  if (result.kind === "success") {
+    return { kind: "success", credentials: result.data };
+  }
+  const { error } = result;
+  if (error.kind === "http" && error.httpStatus === 400) {
+    return {
+      kind: "validation_failed",
+      message: error.safeMessage,
+      traceId: error.traceId,
+    };
+  }
+  if (error.kind === "http" && error.httpStatus === 409) {
+    return {
+      kind: "conflict",
+      message: error.safeMessage,
+      traceId: error.traceId,
+    };
+  }
+  if (error.kind === "http" && error.httpStatus === 429) {
+    return { kind: "rate_limited" };
+  }
+  return {
+    kind: "unknown_failure",
+    traceId: error.kind === "http" ? error.traceId : undefined,
+  };
+}
+
 /**
  * The only thing in this module allowed to talk to Backend V2's auth surface. Every
  * caller works in terms of the typed outcomes above, never raw HTTP status codes -
@@ -92,6 +144,22 @@ export class BackendAuthClient implements AuthBackendPort {
 
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl;
+  }
+
+  async register(
+    username: string,
+    password: string,
+    displayName: string,
+    ip?: ClientIpOverride,
+  ): Promise<RegisterOutcome> {
+    const result = await authResource.register(
+      username,
+      password,
+      displayName,
+      ip,
+      this.baseUrl,
+    );
+    return toRegisterOutcome(result);
   }
 
   async login(

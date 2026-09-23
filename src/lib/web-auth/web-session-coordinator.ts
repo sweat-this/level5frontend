@@ -25,6 +25,22 @@ export type LoginResult =
   // a cookie/sessionId in this case.
   | { kind: "unavailable" };
 
+/**
+ * Mirrors LoginResult's passthrough-on-non-success shape, but with registration's actual
+ * Backend V2 failure modes (see BackendAuthClient.RegisterOutcome) instead of login's. A
+ * successful registration goes through the exact same createSession() path as login - see
+ * register() below - so it never issues a second login request for credentials Backend V2
+ * already returned.
+ */
+export type RegisterResult =
+  | { kind: "success"; sessionId: string; absoluteExpiresAt: number }
+  | { kind: "validation_failed"; message: string; traceId?: string }
+  | { kind: "conflict"; message: string; traceId?: string }
+  | { kind: "rate_limited" }
+  | { kind: "unknown_failure"; traceId?: string }
+  // Same orphan-session meaning as LoginResult's "unavailable" - see createSession().
+  | { kind: "unavailable" };
+
 export type AccessTokenResult =
   | { kind: "ready"; accessToken: string }
   | { kind: "reauthentication_required" }
@@ -136,12 +152,52 @@ export class WebSessionCoordinator {
     if (outcome.kind !== "success") {
       return outcome;
     }
+    return this.createSession(outcome.credentials, "login_create");
+  }
 
+  /**
+   * Registration and login both end with the same thing: real Backend V2 credentials that need
+   * a fresh browser-facing web session. This is that shared path (see createSession()) - a
+   * successful registration establishes the session directly, never issuing a second login
+   * request for credentials Backend V2 already returned.
+   */
+  async register(
+    username: string,
+    password: string,
+    displayName: string,
+  ): Promise<RegisterResult> {
+    const outcome = await this.backend.register(
+      username,
+      password,
+      displayName,
+    );
+    if (outcome.kind !== "success") {
+      return outcome;
+    }
+    return this.createSession(outcome.credentials, "register_create");
+  }
+
+  /**
+   * Generates a fresh opaque session id, persists the shared WebSession, and returns what the
+   * browser cookie needs - or, if the store can't durably record it, best-effort revokes the
+   * Backend V2 credential it was just handed (orphan-session guard) and reports `unavailable`
+   * without ever returning a sessionId. Shared by login() and register() - see issue #6's
+   * "Shared session-creation path". `operation` labels the emitted diagnostic event with which
+   * caller triggered it, so an orphan-session failure during registration is never misreported
+   * as a login failure.
+   */
+  private async createSession(
+    credentials: AccessTokenResponseDto,
+    operation: "login_create" | "register_create",
+  ): Promise<
+    | { kind: "success"; sessionId: string; absoluteExpiresAt: number }
+    | { kind: "unavailable" }
+  > {
     const sessionId = generateSessionId();
     const sessionIdHash = hashSessionId(sessionId);
     const session = credentialsToReadySession(
       sessionIdHash,
-      outcome.credentials,
+      credentials,
       1,
       this.now(),
       null,
@@ -153,14 +209,12 @@ export class WebSessionCoordinator {
       if (!isStoreUnavailable(err)) {
         throw err;
       }
-      recordSessionEvent("session_store_unavailable", {
-        operation: "login_create",
-      });
+      recordSessionEvent("session_store_unavailable", { operation });
       // Orphan-session guard: Backend V2 already issued a real, one-time-rotating refresh
       // session. If we can't durably record our side of it, we must not hand the browser a
       // cookie for a session we can't track - and we must not leave that Backend credential
       // dangling either (best-effort; BackendAuthClient.logout never throws).
-      await this.backend.logout(outcome.credentials.refreshToken);
+      await this.backend.logout(credentials.refreshToken);
       return { kind: "unavailable" };
     }
 

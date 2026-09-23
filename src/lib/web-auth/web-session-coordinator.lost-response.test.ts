@@ -4,6 +4,7 @@ import type {
   LoginOutcome,
   MeOutcome,
   RefreshOutcome,
+  RegisterOutcome,
 } from "./backend-auth-client";
 import {
   fakeAccount,
@@ -26,6 +27,10 @@ import { WebSessionCoordinator } from "./web-session-coordinator";
 class LostResponseBackendAuthClient implements AuthBackendPort {
   refreshCallCount = 0;
   private rotatedServerSide = false;
+
+  async register(): Promise<RegisterOutcome> {
+    return { kind: "unknown_failure" };
+  }
 
   async login(): Promise<LoginOutcome> {
     return {

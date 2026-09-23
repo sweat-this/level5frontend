@@ -88,12 +88,16 @@ describe("WebSessionCoordinator", () => {
 
   it("performs one coordinated refresh and retries /me once after a 401", async () => {
     const sessionId = await loginAndGetSessionId();
+    // Captured once and reused below - fakeAccount() stamps a fresh createdAt on every call, so
+    // calling it a second time for the assertion could compare against a different millisecond
+    // and flake.
+    const account = fakeAccount();
     let meCalls = 0;
     backend.getMeImpl = () => {
       meCalls += 1;
       return meCalls === 1
         ? { kind: "unauthorized" }
-        : { kind: "success", account: fakeAccount() };
+        : { kind: "success", account };
     };
     backend.refreshImpl = () => ({
       kind: "success",
@@ -102,7 +106,7 @@ describe("WebSessionCoordinator", () => {
 
     const result = await coordinator.getMe(sessionId);
 
-    expect(result).toEqual({ kind: "success", account: fakeAccount() });
+    expect(result).toEqual({ kind: "success", account });
     expect(backend.refreshCallCount).toBe(1);
     expect(backend.getMeCallCount).toBe(2);
   });
@@ -151,10 +155,12 @@ describe("WebSessionCoordinator", () => {
     expect(result).toEqual({ kind: "unavailable" });
     expect(backend.refreshCallCount).toBe(0);
 
-    // The session must still be usable afterwards - not silently destroyed.
-    backend.getMeImpl = () => ({ kind: "success", account: fakeAccount() });
+    // The session must still be usable afterwards - not silently destroyed. Captured once and
+    // reused below - see the comment in the coordinated-refresh test above.
+    const account = fakeAccount();
+    backend.getMeImpl = () => ({ kind: "success", account });
     const retry = await coordinator.getMe(sessionId);
-    expect(retry).toEqual({ kind: "success", account: fakeAccount() });
+    expect(retry).toEqual({ kind: "success", account });
   });
 
   it("moves to reauthentication_required when the backend reports the refresh token invalid", async () => {
