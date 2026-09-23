@@ -37,6 +37,7 @@ const navLinks = [
   { to: "/level5", label: "Scores" },
   { to: "/level5/characters", label: "Characters" },
   { to: "/level5/drblood", label: "Dr Blood" },
+  { to: "/account", label: "Account" },
 ];
 
 function getStatusChipColor(isOffline: boolean): "error" | "success" {

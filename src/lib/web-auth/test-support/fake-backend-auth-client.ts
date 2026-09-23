@@ -6,15 +6,24 @@ import type {
   LoginOutcome,
   MeOutcome,
   RefreshOutcome,
+  RegisterOutcome,
 } from "../backend-auth-client";
 
 /** In-memory double for AuthBackendPort so coordinator tests never touch real HTTP. */
 export class FakeBackendAuthClient implements AuthBackendPort {
+  registerCallCount = 0;
   loginCallCount = 0;
   refreshCallCount = 0;
   logoutCallCount = 0;
   getMeCallCount = 0;
 
+  registerImpl: (
+    username: string,
+    password: string,
+    displayName: string,
+  ) => RegisterOutcome | Promise<RegisterOutcome> = () => ({
+    kind: "unknown_failure",
+  });
   loginImpl: (
     username: string,
     password: string,
@@ -30,6 +39,16 @@ export class FakeBackendAuthClient implements AuthBackendPort {
   getMeImpl: (accessToken: string) => MeOutcome | Promise<MeOutcome> = () => ({
     kind: "unavailable",
   });
+
+  async register(
+    username: string,
+    password: string,
+    displayName: string,
+    _ip?: ClientIpOverride,
+  ): Promise<RegisterOutcome> {
+    this.registerCallCount += 1;
+    return this.registerImpl(username, password, displayName);
+  }
 
   async login(
     username: string,

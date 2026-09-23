@@ -19,12 +19,14 @@ export function register(
   username: string,
   password: string,
   displayName: string,
+  ip?: ClientIpOverride,
   baseUrl?: string,
 ): Promise<TransportResult<BackendCredentials>> {
   return request<BackendCredentials>({
     method: "POST",
     path: "/api/v2/auth/register",
     body: { username, password, displayName },
+    ip,
     baseUrl,
   });
 }

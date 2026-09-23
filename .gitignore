@@ -12,6 +12,12 @@ node_modules
 *.tsbuildinfo
 *.local
 
+# Playwright (issue #6 account E2E suite)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
