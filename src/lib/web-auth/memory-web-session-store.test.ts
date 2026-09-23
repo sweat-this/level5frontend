@@ -12,6 +12,8 @@ function makeSession(overrides: Partial<WebSession> = {}): WebSession {
     revision: 1,
     refreshState: "Ready",
     refreshLeaseExpiresAt: null,
+    createdAt: Date.now(),
+    absoluteExpiresAt: Date.now() + 3_600_000,
     ...overrides,
   };
 }

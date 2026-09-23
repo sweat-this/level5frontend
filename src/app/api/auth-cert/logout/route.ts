@@ -29,7 +29,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get(sessionCookieName())?.value;
   if (sessionId) {
-    await getCertificationCoordinator().logout(sessionId);
+    try {
+      const coordinator = await getCertificationCoordinator();
+      await coordinator.logout(sessionId);
+    } catch {
+      // Local cookie invalidation below must happen regardless of remote-cleanup failure - see
+      // WebSessionCoordinator.logout and docs/architecture/web-authentication.md's logout-failure
+      // semantics. WebSessionCoordinator.logout already swallows the expected
+      // SessionStoreUnavailableError case itself; this is a last-resort safety net.
+    }
   }
 
   const expired = buildExpiredSessionCookie();

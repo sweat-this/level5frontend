@@ -1,27 +1,25 @@
 import "server-only";
 import { BackendAuthClient } from "./backend-auth-client";
-import { MemoryWebSessionStore } from "./memory-web-session-store";
+import { getWebSessionStore } from "./session-store-runtime";
 import { WebSessionCoordinator } from "./web-session-coordinator";
 
 // Process-local singleton backing the temporary /api/auth-cert/* certification routes
-// (src/app/api/auth-cert/**). MemoryWebSessionStore is development/test only - see
-// memory-web-session-store.ts - and these routes are gated off in production
-// regardless of configuration (see config.ts). Nothing here is production session
-// infrastructure; issue #5 replaces the store and issue #10 owns the production
-// ingress this singleton doesn't model.
-let coordinator: WebSessionCoordinator | null = null;
+// (src/app/api/auth-cert/**). The store is whatever LEVEL5_WEB_SESSION_STORE selects
+// (session-store-runtime.ts) - MemoryWebSessionStore in ordinary dev/test, or
+// RedisWebSessionStore when a developer explicitly opts into it locally for certification.
+// These routes are gated off in production regardless of configuration (see config.ts).
+let coordinatorPromise: Promise<WebSessionCoordinator> | null = null;
 
-export function getCertificationCoordinator(): WebSessionCoordinator {
-  if (!coordinator) {
-    coordinator = new WebSessionCoordinator(
-      new MemoryWebSessionStore(),
-      new BackendAuthClient(),
+export function getCertificationCoordinator(): Promise<WebSessionCoordinator> {
+  if (!coordinatorPromise) {
+    coordinatorPromise = getWebSessionStore().then(
+      (store) => new WebSessionCoordinator(store, new BackendAuthClient()),
     );
   }
-  return coordinator;
+  return coordinatorPromise;
 }
 
-/** Test-only: forces a fresh in-memory store/coordinator for the next call. */
+/** Test-only: forces a fresh coordinator (and, via session-store-runtime, store) for the next call. */
 export function resetCertificationCoordinatorForTests(): void {
-  coordinator = null;
+  coordinatorPromise = null;
 }
