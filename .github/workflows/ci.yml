@@ -18,6 +18,12 @@ jobs:
 
       - run: npm ci
 
+      # Fails if the committed generated TypeScript (src/generated/level5-v2.ts) doesn't match
+      # the pinned contract snapshot (contracts/level5-v2.openapi.json) - i.e. the snapshot was
+      # updated without regenerating types, or the generated file was hand-edited. Never reaches
+      # out to Backend V2 or GitHub - both inputs are committed. See contracts/README.md.
+      - run: npm run contracts:check
+
       - run: npm run lint
 
       - run: npm run typecheck
