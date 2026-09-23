@@ -29,7 +29,9 @@ export function loginRedirectFor(tag: string | undefined): string {
   return `/account/login?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-function mapLookupError(error: TransportError): string {
+/** Exported for reuse by the Send Friend Request action (issue #8), which re-resolves the same
+ * exact-tag lookup server-side before sending - see players/actions.ts. */
+export function mapLookupError(error: TransportError): string {
   switch (error.kind) {
     case "http":
       if (error.httpStatus === 400) {

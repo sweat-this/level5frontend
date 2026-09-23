@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Alert, Button, Stack, TextField, Typography } from "@mui/material";
 import { PLAYERS_PATH, resolvePlayerLookup } from "./lookup";
+import SendFriendRequestForm from "./SendFriendRequestForm";
 
 export const metadata: Metadata = {
   title: "Sweat This - Find Player",
@@ -70,28 +71,35 @@ async function LookupResult({ tag }: { readonly tag: string }) {
   }
 
   return (
-    <Stack
-      spacing={1}
-      component="dl"
-      sx={{ margin: 0 }}
-      aria-label="Search result"
-    >
-      <Stack direction="row" spacing={1}>
-        <Typography component="dt" sx={{ fontWeight: "bold", margin: 0 }}>
-          Display Name:
-        </Typography>
-        <Typography component="dd" sx={{ margin: 0 }}>
-          {outcome.displayName}
-        </Typography>
+    <Stack spacing={2}>
+      <Stack
+        spacing={1}
+        component="dl"
+        sx={{ margin: 0 }}
+        aria-label="Search result"
+      >
+        <Stack direction="row" spacing={1}>
+          <Typography component="dt" sx={{ fontWeight: "bold", margin: 0 }}>
+            Display Name:
+          </Typography>
+          <Typography component="dd" sx={{ margin: 0 }}>
+            {outcome.displayName}
+          </Typography>
+        </Stack>
+        <Stack direction="row" spacing={1}>
+          <Typography component="dt" sx={{ fontWeight: "bold", margin: 0 }}>
+            Player Tag:
+          </Typography>
+          <Typography component="dd" sx={{ margin: 0 }}>
+            {outcome.tag}
+          </Typography>
+        </Stack>
       </Stack>
-      <Stack direction="row" spacing={1}>
-        <Typography component="dt" sx={{ fontWeight: "bold", margin: 0 }}>
-          Player Tag:
-        </Typography>
-        <Typography component="dd" sx={{ margin: 0 }}>
-          {outcome.tag}
-        </Typography>
-      </Stack>
+
+      <SendFriendRequestForm
+        tag={outcome.tag}
+        displayName={outcome.displayName}
+      />
     </Stack>
   );
 }

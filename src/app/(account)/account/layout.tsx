@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 const SUB_NAV_LINKS = [
   { href: "/account", label: "Account" },
   { href: "/account/profile", label: "Profile" },
+  { href: "/account/friends", label: "Friends" },
   { href: "/account/players", label: "Find Player" },
 ] as const;
 
