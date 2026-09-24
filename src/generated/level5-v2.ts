@@ -1248,7 +1248,7 @@ export interface components {
             rulesetVersion?: number | null;
             informationPolicy?: string | null;
             /** Format: uuid */
-            clientRequestId?: string | null;
+            clientRequestId: string;
         };
         CurrentAccountResponseDto: {
             /** Format: uuid */
