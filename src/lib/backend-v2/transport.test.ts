@@ -448,6 +448,87 @@ describe("transport", () => {
       });
       expect(fetchMock).toHaveBeenCalledTimes(fastRetry.maxAttempts);
     });
+
+    // Issue #10 retry/timeout certification - pinning tests for behavior transport.ts already
+    // implements, not new logic. 503 above already covers isRetryableStatus's general shape;
+    // 408/502/504 are the other three members of that same allowlist and hadn't been exercised.
+    it.each([408, 502, 504])(
+      "retries a %i, the same as 503",
+      async (status) => {
+        fetchMock
+          .mockResolvedValueOnce(new Response(null, { status }))
+          .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+
+        const result = await request({
+          method: "GET",
+          path: "/x",
+          baseUrl: BASE_URL,
+          retry: fastRetry,
+        });
+        expect(result).toEqual({
+          kind: "success",
+          status: 200,
+          data: { ok: true },
+        });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it("bounded-retries an actual network failure (not just an HTTP status) and eventually succeeds", async () => {
+      fetchMock
+        .mockRejectedValueOnce(new TypeError("fetch failed"))
+        .mockRejectedValueOnce(new TypeError("fetch failed"))
+        .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+
+      const result = await request({
+        method: "GET",
+        path: "/x",
+        baseUrl: BASE_URL,
+        retry: fastRetry,
+      });
+      expect(result).toEqual({
+        kind: "success",
+        status: 200,
+        data: { ok: true },
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it("exhausts maxAttempts on a network failure that never recovers", async () => {
+      fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+
+      const result = await request({
+        method: "GET",
+        path: "/x",
+        baseUrl: BASE_URL,
+        retry: fastRetry,
+      });
+      expect(result).toEqual({ kind: "error", error: { kind: "network" } });
+      expect(fetchMock).toHaveBeenCalledTimes(fastRetry.maxAttempts);
+    });
+
+    it("never retries a timeout, even with a retry policy supplied", async () => {
+      fetchMock.mockImplementation(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () => {
+              reject(
+                new DOMException("The operation was aborted", "TimeoutError"),
+              );
+            });
+          }),
+      );
+
+      const result = await request({
+        method: "GET",
+        path: "/x",
+        baseUrl: BASE_URL,
+        timeoutMs: 15,
+        retry: fastRetry,
+      });
+      expect(result).toEqual({ kind: "error", error: { kind: "timeout" } });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("caller cancellation", () => {

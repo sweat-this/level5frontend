@@ -9,17 +9,54 @@ import type { RedisSessionClient } from "../redis-web-session-store";
  */
 export class FakeRedisSessionClient implements RedisSessionClient {
   private readonly data = new Map<string, string>();
+  private signal: AbortSignal | undefined;
 
   getFault: () => boolean = () => false;
   setFault: () => boolean = () => false;
   evalFault: () => boolean = () => false;
   delFault: () => boolean = () => false;
 
-  withAbortSignal(_signal: AbortSignal): RedisSessionClient {
+  // Issue #10: simulates Redis latency. 0 (the default) means every command resolves
+  // immediately, same as before this existed. A non-zero value races the command against the
+  // AbortSignal RedisWebSessionStore.withTimeout() supplies (AbortSignal.timeout(commandTimeoutMs))
+  // - exactly as the real @redis/client would when a command outlives that budget - so a "slow
+  // Redis" scenario actually exercises the same abort/reject path a real timeout would, not a
+  // hand-waved substitute.
+  delayMs: () => number = () => 0;
+
+  withAbortSignal(signal: AbortSignal): RedisSessionClient {
+    this.signal = signal;
     return this;
   }
 
+  private async simulateLatency(): Promise<void> {
+    const ms = this.delayMs();
+    if (ms <= 0) {
+      return;
+    }
+    const signal = this.signal;
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(resolve, ms);
+      if (signal) {
+        if (signal.aborted) {
+          clearTimeout(timer);
+          reject(signal.reason ?? new Error("aborted"));
+          return;
+        }
+        signal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            reject(signal.reason ?? new Error("aborted"));
+          },
+          { once: true },
+        );
+      }
+    });
+  }
+
   async get(key: string): Promise<string | null> {
+    await this.simulateLatency();
     if (this.getFault()) {
       throw new Error("fake redis: GET failed");
     }
@@ -34,6 +71,7 @@ export class FakeRedisSessionClient implements RedisSessionClient {
       expiration: { type: "PXAT"; value: number };
     },
   ): Promise<string | null> {
+    await this.simulateLatency();
     if (this.setFault()) {
       throw new Error("fake redis: SET failed");
     }
@@ -48,6 +86,7 @@ export class FakeRedisSessionClient implements RedisSessionClient {
     _script: string,
     options: { keys: string[]; arguments: string[] },
   ): Promise<unknown> {
+    await this.simulateLatency();
     if (this.evalFault()) {
       throw new Error("fake redis: EVAL failed");
     }
@@ -81,6 +120,7 @@ export class FakeRedisSessionClient implements RedisSessionClient {
   }
 
   async del(key: string): Promise<number> {
+    await this.simulateLatency();
     if (this.delFault()) {
       throw new Error("fake redis: DEL failed");
     }
