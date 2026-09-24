@@ -26,6 +26,36 @@ describe("transport", () => {
     vi.unstubAllGlobals();
   });
 
+  describe("telemetry (issue #10)", () => {
+    it("passes a stable per-call span name and propagateContext via the fetch opentelemetry option", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/api/v2/players/by-tag/Somebody%234444",
+        operationName: "players.getByTag",
+        baseUrl: BASE_URL,
+      });
+
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      expect(init.opentelemetry).toEqual({
+        spanName: "backend.players.getByTag.fetch",
+        propagateContext: true,
+      });
+    });
+
+    it("does not throw when the OTel SDK isn't registered (no-op tracer)", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await expect(
+        request({
+          method: "GET",
+          path: "/x",
+          operationName: "test.op",
+          baseUrl: BASE_URL,
+        }),
+      ).resolves.toMatchObject({ kind: "success" });
+    });
+  });
+
   describe("ProblemDetails / error normalization", () => {
     it("classifies a 400 ProblemDetails with code and traceId", async () => {
       fetchMock.mockResolvedValue(
@@ -38,6 +68,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -59,6 +90,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result.kind).toBe("error");
@@ -81,6 +113,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -96,6 +129,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -111,6 +145,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -126,6 +161,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -145,6 +181,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -168,6 +205,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -189,6 +227,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -209,7 +248,12 @@ describe("transport", () => {
         }),
       );
       await expect(
-        request({ method: "GET", path: "/x", baseUrl: BASE_URL }),
+        request({
+          method: "GET",
+          path: "/x",
+          operationName: "test.op",
+          baseUrl: BASE_URL,
+        }),
       ).resolves.toMatchObject({
         kind: "error",
         error: {
@@ -225,6 +269,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({ kind: "error", error: { kind: "network" } });
@@ -244,6 +289,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         timeoutMs: 15,
       });
@@ -260,6 +306,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -278,6 +325,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -301,6 +349,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -314,6 +363,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({ kind: "success", status: 204, data: undefined });
@@ -336,6 +386,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -354,6 +405,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: SAFE_READ_RETRY_POLICY,
       });
@@ -369,6 +421,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -388,6 +441,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -404,6 +458,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -424,6 +479,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -439,6 +495,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -467,6 +524,7 @@ describe("transport", () => {
       const pending = request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         signal: controller.signal,
         retry: SAFE_READ_RETRY_POLICY,
@@ -485,6 +543,7 @@ describe("transport", () => {
       await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         trace: {
           traceparent:
@@ -505,6 +564,7 @@ describe("transport", () => {
       await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         trace: { traceparent: "not-a-real-traceparent" },
       });
@@ -518,6 +578,7 @@ describe("transport", () => {
       await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         trace: {
           traceparent:

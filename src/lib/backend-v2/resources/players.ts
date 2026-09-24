@@ -16,6 +16,7 @@ export function getByTag(
   return request<PlayerProfile>({
     method: "GET",
     path: `/api/v2/players/by-tag/${encodeURIComponent(tag)}`,
+    operationName: "players.getByTag",
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
     signal,
@@ -29,6 +30,7 @@ export function getMyPlayerId(
   return request<string>({
     method: "GET",
     path: "/api/v2/players/me",
+    operationName: "players.getMyPlayerId",
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
     signal,
@@ -47,6 +49,7 @@ export function getMyProfile(
   return request<PlayerProfile>({
     method: "GET",
     path: "/api/v2/players/me/profile",
+    operationName: "players.getMyProfile",
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
     signal,
@@ -61,6 +64,7 @@ export function updateMyProfile(
   return request<PlayerProfile>({
     method: "PATCH",
     path: "/api/v2/players/me",
+    operationName: "players.updateMyProfile",
     body: { displayName },
     accessToken,
   });

@@ -149,6 +149,7 @@ export class WebSessionCoordinator {
 
   async login(username: string, password: string): Promise<LoginResult> {
     const outcome = await this.backend.login(username, password);
+    recordSessionEvent("login_outcome", { kind: outcome.kind });
     if (outcome.kind !== "success") {
       return outcome;
     }
@@ -171,6 +172,7 @@ export class WebSessionCoordinator {
       password,
       displayName,
     );
+    recordSessionEvent("register_outcome", { kind: outcome.kind });
     if (outcome.kind !== "success") {
       return outcome;
     }
@@ -642,6 +644,7 @@ export class WebSessionCoordinator {
         rolledBack,
       );
       if (confirmation === "landed") {
+        recordSessionEvent("refresh_throttled");
         return { kind: "throttled" };
       }
       if (confirmation === "unavailable") {

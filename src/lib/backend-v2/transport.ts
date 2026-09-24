@@ -1,4 +1,6 @@
 import "server-only";
+import { SpanStatusCode } from "@opentelemetry/api";
+import { tracer } from "@/lib/otel/telemetry";
 
 /**
  * The single place that talks HTTP to Backend V2. Owns cross-cutting request/response concerns
@@ -52,6 +54,10 @@ export const SAFE_READ_RETRY_POLICY: RetryPolicy = {
 export interface RequestOptions {
   readonly method: "GET" | "POST" | "PATCH" | "DELETE";
   readonly path: string;
+  // A stable, low-cardinality identifier (e.g. "players.getByTag") for this call's telemetry
+  // span/metrics (issue #10) - `path` alone isn't safe to use directly, since several resource
+  // paths embed a series ID/Player Tag/player ID. Every resource client call supplies this.
+  readonly operationName: string;
   readonly body?: unknown;
   readonly accessToken?: string;
   readonly ip?: ClientIpOverride;
@@ -259,36 +265,23 @@ async function attempt(
   }
 }
 
+interface AttemptedResult<T> {
+  readonly result: TransportResult<T>;
+  // Total attempts actually made (1 = no retry occurred) - reported as a span attribute, issue #10.
+  readonly attempts: number;
+}
+
 /**
- * Executes one Backend V2 request and returns a normalized result - never throws. Retries only
- * when `options.retry` is explicitly supplied (safe reads only - see issue #11), and never
- * retries past caller cancellation (issue #10).
+ * The retry loop itself, unchanged from before issue #10 - split out only so request() can wrap
+ * it in a span and record attempt count/outcome as attributes without an early `return` inside
+ * the loop skipping that bookkeeping.
  */
-export async function request<T>(
+async function executeWithRetry<T>(
   options: RequestOptions,
-): Promise<TransportResult<T>> {
-  const url = `${options.baseUrl ?? backendBaseUrl()}${options.path}`;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-
-  const headers: Record<string, string> = {
-    ...traceHeaders(options.trace),
-    ...(options.ip?.testOnlyForwardedFor
-      ? { "x-forwarded-for": options.ip.testOnlyForwardedFor }
-      : {}),
-    ...(options.accessToken
-      ? { authorization: `Bearer ${options.accessToken}` }
-      : {}),
-  };
-  if (options.body !== undefined) {
-    headers["content-type"] = "application/json";
-  }
-
-  const init: RequestInit = {
-    method: options.method,
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  };
-
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<AttemptedResult<T>> {
   const maxAttempts = options.retry?.maxAttempts ?? 1;
   let lastNonRetryable: TransportResult<T> | null = null;
 
@@ -296,22 +289,31 @@ export async function request<T>(
     const outcome = await attempt(url, init, timeoutMs, options.signal);
 
     if (outcome.kind === "cancelled") {
-      return { kind: "error", error: { kind: "cancelled" } };
+      return {
+        result: { kind: "error", error: { kind: "cancelled" } },
+        attempts: attemptNumber,
+      };
     }
     if (outcome.kind === "timeout") {
-      return { kind: "error", error: { kind: "timeout" } };
+      return {
+        result: { kind: "error", error: { kind: "timeout" } },
+        attempts: attemptNumber,
+      };
     }
     if (outcome.kind === "network") {
       if (options.retry && attemptNumber < maxAttempts) {
         await delay(jitteredBackoff(options.retry, attemptNumber));
         continue;
       }
-      return { kind: "error", error: { kind: "network" } };
+      return {
+        result: { kind: "error", error: { kind: "network" } },
+        attempts: attemptNumber,
+      };
     }
 
     const { raw } = outcome;
     if (raw.status >= 200 && raw.status < 300) {
-      return decodeSuccess<T>(raw);
+      return { result: decodeSuccess<T>(raw), attempts: attemptNumber };
     }
 
     const problem = parseProblemDetails(raw);
@@ -341,11 +343,105 @@ export async function request<T>(
       );
       continue;
     }
-    return result;
+    return { result, attempts: attemptNumber };
   }
 
   // Unreachable in practice (the loop always returns), but keeps the function total.
-  return lastNonRetryable ?? { kind: "error", error: { kind: "network" } };
+  return {
+    result: lastNonRetryable ?? { kind: "error", error: { kind: "network" } },
+    attempts: maxAttempts,
+  };
+}
+
+function outcomeAttribute<T>(result: TransportResult<T>): string {
+  return result.kind === "success" ? "success" : result.error.kind;
+}
+
+function statusCodeAttribute<T>(
+  result: TransportResult<T>,
+): number | undefined {
+  if (result.kind === "success") {
+    return result.status;
+  }
+  if (
+    result.error.kind === "http" ||
+    result.error.kind === "invalid_response"
+  ) {
+    return result.error.httpStatus;
+  }
+  return undefined;
+}
+
+/**
+ * Executes one Backend V2 request and returns a normalized result - never throws. Retries only
+ * when `options.retry` is explicitly supplied (safe reads only - see issue #11), and never
+ * retries past caller cancellation (issue #10).
+ *
+ * Wrapped in a span named for `options.operationName` (never the raw `path`, which can embed a
+ * series ID/Player Tag/player ID - issue #10's low-cardinality requirement) recording duration,
+ * outcome, status code, and retry count. The actual fetch() call(s) inside get the same
+ * `operationName` and `propagateContext: true` via the `opentelemetry` RequestInit option (see
+ * @vercel/otel's fetch instrumentation) - each attempt becomes its own child span, and Backend
+ * V2's ASP.NET trace picks up the same W3C trace context automatically.
+ */
+export async function request<T>(
+  options: RequestOptions,
+): Promise<TransportResult<T>> {
+  const url = `${options.baseUrl ?? backendBaseUrl()}${options.path}`;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+  const headers: Record<string, string> = {
+    ...traceHeaders(options.trace),
+    ...(options.ip?.testOnlyForwardedFor
+      ? { "x-forwarded-for": options.ip.testOnlyForwardedFor }
+      : {}),
+    ...(options.accessToken
+      ? { authorization: `Bearer ${options.accessToken}` }
+      : {}),
+  };
+  if (options.body !== undefined) {
+    headers["content-type"] = "application/json";
+  }
+
+  const init: RequestInit = {
+    method: options.method,
+    headers,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    opentelemetry: {
+      spanName: `backend.${options.operationName}.fetch`,
+      propagateContext: true,
+    },
+  };
+
+  return tracer.startActiveSpan(
+    `backend.${options.operationName}`,
+    async (span) => {
+      try {
+        const { result, attempts } = await executeWithRetry<T>(
+          options,
+          url,
+          init,
+          timeoutMs,
+        );
+        span.setAttribute("backend.operation", options.operationName);
+        span.setAttribute("backend.retry_count", attempts - 1);
+        span.setAttribute("backend.outcome", outcomeAttribute(result));
+        const statusCode = statusCodeAttribute(result);
+        if (statusCode !== undefined) {
+          span.setAttribute("http.status_code", statusCode);
+        }
+        span.setStatus({
+          code:
+            result.kind === "success"
+              ? SpanStatusCode.OK
+              : SpanStatusCode.ERROR,
+        });
+        return result;
+      } finally {
+        span.end();
+      }
+    },
+  );
 }
 
 function decodeSuccess<T>(raw: RawResponse): TransportResult<T> {
