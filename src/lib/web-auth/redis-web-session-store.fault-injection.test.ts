@@ -147,4 +147,50 @@ describe("RedisWebSessionStore", () => {
     ).rejects.toThrow();
     expect(await store.find(original.sessionIdHash)).toEqual(original);
   });
+
+  // Issue #10: Redis *latency*, not an outright command failure - a command that outlives
+  // commandTimeoutMs must fail closed the same way an immediate error does (SessionStoreUnavailableError),
+  // never hang the caller past that budget.
+  describe("latency (issue #10)", () => {
+    it("find() fails closed with SessionStoreUnavailableError when GET exceeds commandTimeoutMs", async () => {
+      const client = new FakeRedisSessionClient();
+      const store = new RedisWebSessionStore(client, keyring(), {
+        now: () => NOW,
+        commandTimeoutMs: 20,
+      });
+      await store.create(session());
+      client.delayMs = () => 200;
+
+      await expect(store.find("hash-1")).rejects.toBeInstanceOf(
+        SessionStoreUnavailableError,
+      );
+    });
+
+    it("compareAndSwap() fails closed with SessionStoreUnavailableError when EVAL exceeds commandTimeoutMs", async () => {
+      const client = new FakeRedisSessionClient();
+      const store = new RedisWebSessionStore(client, keyring(), {
+        now: () => NOW,
+        commandTimeoutMs: 20,
+      });
+      await store.create(session());
+      client.delayMs = () => 200;
+
+      await expect(
+        store.compareAndSwap("hash-1", 1, session({ revision: 2 })),
+      ).rejects.toBeInstanceOf(SessionStoreUnavailableError);
+    });
+
+    it("a command well within commandTimeoutMs still succeeds normally", async () => {
+      const client = new FakeRedisSessionClient();
+      const store = new RedisWebSessionStore(client, keyring(), {
+        now: () => NOW,
+        commandTimeoutMs: 200,
+      });
+      const original = session();
+      await store.create(original);
+      client.delayMs = () => 5;
+
+      expect(await store.find("hash-1")).toEqual(original);
+    });
+  });
 });
