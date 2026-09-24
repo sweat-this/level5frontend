@@ -43,6 +43,7 @@ describe("trusted client IP certification", () => {
     await request({
       method: "POST",
       path: "/api/v2/auth/login",
+      operationName: "auth.login",
       baseUrl: "http://backend.test",
       ip: clientIp ? { clientIp } : undefined,
     });
@@ -66,6 +67,7 @@ describe("trusted client IP certification", () => {
     await request({
       method: "POST",
       path: "/api/v2/auth/login",
+      operationName: "auth.login",
       baseUrl: "http://backend.test",
       ip: clientIp ? { clientIp } : undefined,
     });
@@ -90,6 +92,7 @@ describe("trusted client IP certification", () => {
     await request({
       method: "POST",
       path: "/api/v2/auth/login",
+      operationName: "auth.login",
       baseUrl: "http://backend.test",
       ip: clientIp ? { clientIp } : undefined,
     });
