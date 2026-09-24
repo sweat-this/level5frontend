@@ -31,9 +31,11 @@ export default function ScoresTable() {
   } else if (isPending || !data) {
     body = (
       <Box
+        role="status"
+        aria-label="Loading high scores"
         sx={{ display: "flex", justifyContent: "center", paddingTop: "4em" }}
       >
-        <CircularProgress />
+        <CircularProgress aria-hidden="true" />
       </Box>
     );
   } else {

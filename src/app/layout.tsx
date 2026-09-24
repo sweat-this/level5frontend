@@ -44,7 +44,11 @@ export default function RootLayout({
       <body>
         <ThemeRegistry>
           <Grid id="mainContainer">
-            <Grid id="scrollableContent">{children}</Grid>
+            {/* The one semantic <main> landmark for every page (issue #10) - none of the
+            nested layouts (account/level5/auth) render their own <main>, so this is safe app-wide. */}
+            <Grid id="scrollableContent" component="main">
+              {children}
+            </Grid>
           </Grid>
           <Grid id="footer" />
         </ThemeRegistry>
