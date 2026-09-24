@@ -49,9 +49,10 @@ function mapUpdateError(error: TransportError): string {
 
 /**
  * Backend V2's current PATCH /players/me is last-write-wins with no revision/concurrency
- * check (issue #7 - intentionally not added here either), so this never needs optimistic
- * update state: the server-confirmed PlayerProfileResponseDto is the only source of truth,
- * surfaced by revalidating the page after a success.
+ * check (issue #7 - intentionally not added here either), so this never needs broad optimistic
+ * update state. `revalidatePath` keeps the page's own data fresh; the server-confirmed
+ * `displayName` is also returned directly on success (issue #10) so the form can reconcile its
+ * input to the trimmed, Backend-confirmed value without waiting on that revalidation.
  */
 export async function updateDisplayNameAction(
   _prevState: ProfileFormState,
@@ -95,5 +96,9 @@ export async function updateDisplayNameAction(
   }
 
   revalidatePath(PROFILE_PATH);
-  return { status: "success", message: "Display name updated." };
+  return {
+    status: "success",
+    message: "Display name updated.",
+    displayName: result.data.displayName,
+  };
 }
