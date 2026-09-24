@@ -601,6 +601,7 @@ describe("transport", () => {
         const result = await request({
           method: "GET",
           path: "/x",
+          operationName: "test.op",
           baseUrl: BASE_URL,
           retry: fastRetry,
         });
@@ -622,6 +623,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -639,6 +641,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -661,6 +664,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         timeoutMs: 15,
         retry: fastRetry,
