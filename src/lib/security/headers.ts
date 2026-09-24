@@ -3,20 +3,39 @@
  * to be callable from middleware.ts (Edge runtime) as well as from Server Components, and must
  * stay clear of any Node-only API.
  *
- * CSP uses a per-request nonce (middleware.ts generates it and sets it as both the request's
- * `x-nonce` header - read by the root layout and threaded into MUI's AppRouterCacheProvider for
- * Emotion's injected <style> tags - and inside the CSP's own script-src/style-src). Next.js's App
- * Router renders inline bootstrap/hydration <script> tags on every page; verified empirically
- * (real `next start` + a headless browser) that a static `script-src 'self'` with no nonce blocks
- * those scripts and breaks hydration entirely. A nonce is the only approach that keeps script-src
- * meaningfully restrictive (no 'unsafe-inline') while working with the framework, matching Next's
- * own documented CSP pattern - see docs/operations/frontend-production.md for the trade-off this
- * requires (every route becomes dynamically rendered; see PR10's bundle/perf review for the
- * measured cost).
+ * script-src is nonce-based only for routes that are already dynamically rendered
+ * (`/account/*` - force-dynamic, or otherwise reading a Dynamic API for session resolution).
+ * Verified empirically (real `next start` + a headless browser collecting actual
+ * securitypolicyviolation events) that Next's own per-request nonce-threading for its
+ * framework-generated hydration <script> tags only works when the route is genuinely rendered
+ * per-request - a *statically* rendered page has no per-request value to embed at all, so a
+ * nonce can never be correct there regardless of what any Server Component does. Static public
+ * routes (`/`, `/level5`, `/level5/characters`, `/level5/drblood`) therefore get `'unsafe-inline'`
+ * on script-src instead (a narrower, documented exception - see CspOptions.allowInlineScript)
+ * rather than being forced dynamic just to keep a nonce that can't work there anyway; forcing
+ * them dynamic was tried first and found to also silently strip their Cache-Control down to the
+ * same private/no-store treatment as account routes, which issue #10 explicitly calls out as the
+ * wrong trade-off ("do not disable public caching globally merely to make account caching
+ * safe" - caught by the production caching certification, e2e-production/caching.spec.ts).
+ *
+ * style-src is 'unsafe-inline' everywhere, not nonce-based at all: MUI's Paper-based components
+ * (AppBar, Card, Dialog, ...) set elevation box-shadow via an inline `style="--Paper-shadow:..."`
+ * *attribute*, which no nonce can ever cover (nonces only apply to <style>/<script> *elements*).
+ * Keeping style-src nonce-free (rather than nonce-for-elements-plus-a-separate-style-src-attr-
+ * exception) also means Emotion's SSR'd <style> tags need no nonce threading through
+ * ThemeRegistry/AppRouterCacheProvider - which is itself part of why removing headers() from the
+ * root layout does not break MUI styling. Inline-style CSS injection is a materially smaller
+ * blast radius than inline-script XSS (it cannot execute arbitrary JS in a modern browser), which
+ * is the standard justification for treating style-src 'unsafe-inline' as an acceptable trade-off
+ * while keeping script-src as strict as each route can support.
  */
 
 export interface CspOptions {
-  readonly nonce: string;
+  /** Required only when the route actually uses it - static routes never receive one. */
+  readonly nonce?: string;
+  /** Static public routes only (see the module doc comment) - script-src becomes 'unsafe-inline'
+   *  instead of nonce-based, since a nonce can never be correct on a statically rendered page. */
+  readonly allowInlineScript?: boolean;
   /** Origin (scheme://host[:port], no path) of the legacy V1 public API - see MainNavBar's
    *  useServerHealth() and ScoresTable's use of it. Only /level5/* routes render that component. */
   readonly legacyApiOrigin?: string;
@@ -38,14 +57,13 @@ export function toOrigin(value: string | undefined): string | undefined {
 }
 
 export function buildContentSecurityPolicy(options: CspOptions): string {
-  const nonceSource = `'nonce-${options.nonce}'`;
   const connectSrc = [
     "'self'",
     ...(options.legacyApiOrigin ? [options.legacyApiOrigin] : []),
   ];
   const scriptSrc = [
     "'self'",
-    nonceSource,
+    options.allowInlineScript ? "'unsafe-inline'" : `'nonce-${options.nonce}'`,
     ...(options.includeYouTube ? ["https://www.youtube.com"] : []),
   ];
   const imgSrc = [
@@ -59,17 +77,7 @@ export function buildContentSecurityPolicy(options: CspOptions): string {
   const directives: readonly string[] = [
     `default-src 'self'`,
     `script-src ${scriptSrc.join(" ")}`,
-    // Emotion's injected <style> tags carry the same nonce via AppRouterCacheProvider's
-    // `options.nonce` (ThemeRegistry.tsx) - no 'unsafe-inline' needed here either.
-    `style-src 'self' ${nonceSource}`,
-    // Separate from style-src: MUI's Paper-based components (AppBar, Card, Dialog, ...) set
-    // elevation box-shadow via an inline `style="--Paper-shadow:...'"` attribute, not an Emotion
-    // class - verified empirically (real `next start` + a headless browser + CSP violation
-    // events) that this is the only actual inline-style-attribute usage on any route, and a
-    // nonce can never cover the `style` HTML attribute (only <style>/<script> elements). Scoped
-    // to style-src-attr only, so style-src itself (and therefore <style> element / CSSOM
-    // insertion) stays nonce-only with no 'unsafe-inline'.
-    `style-src-attr 'unsafe-inline'`,
+    `style-src 'self' 'unsafe-inline'`,
     `img-src ${imgSrc.join(" ")}`,
     `font-src 'self'`,
     `connect-src ${connectSrc.join(" ")}`,

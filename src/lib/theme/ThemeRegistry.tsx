@@ -22,11 +22,10 @@ const theme = createTheme({
 });
 
 export default function ThemeRegistry({
-  nonce,
   children,
-}: Readonly<{ nonce?: string; children: ReactNode }>) {
+}: Readonly<{ children: ReactNode }>) {
   return (
-    <AppRouterCacheProvider options={{ nonce }}>
+    <AppRouterCacheProvider>
       <ThemeProvider theme={theme}>{children}</ThemeProvider>
     </AppRouterCacheProvider>
   );

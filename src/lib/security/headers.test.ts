@@ -48,17 +48,26 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("form-action 'self'");
   });
 
-  it("scopes script-src and style-src to the nonce, with no default 'unsafe-inline'", () => {
+  it("scopes script-src to the nonce by default, with no 'unsafe-inline'", () => {
     const csp = buildContentSecurityPolicy({ nonce: "abc123" });
     expect(csp).toContain("script-src 'self' 'nonce-abc123'");
-    expect(csp).toContain("style-src 'self' 'nonce-abc123'");
     expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
-    expect(csp).not.toMatch(/^style-src[^;]*unsafe-inline/m);
   });
 
-  it("allows inline style ATTRIBUTES only, via a separate style-src-attr directive", () => {
+  it("uses 'unsafe-inline' for script-src when allowInlineScript is set (static routes) - no nonce needed", () => {
+    const csp = buildContentSecurityPolicy({ allowInlineScript: true });
+    expect(csp).toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).not.toContain("nonce-");
+  });
+
+  it("style-src is always 'unsafe-inline' - never nonce-based (see the module doc comment for why)", () => {
     const csp = buildContentSecurityPolicy({ nonce: "abc" });
-    expect(csp).toContain("style-src-attr 'unsafe-inline'");
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+    expect(csp).not.toMatch(/style-src[^;]*nonce-/);
+    // No separate style-src-attr directive either - 'unsafe-inline' on style-src alone (with no
+    // nonce/hash present in that directive) already covers both <style> elements and the style
+    // attribute.
+    expect(csp).not.toContain("style-src-attr");
   });
 
   it("has no legacy API origin or YouTube by default", () => {
