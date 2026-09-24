@@ -1,6 +1,6 @@
 {
   "backendRepository": "sweat-this/Level5Backend",
-  "backendRef": "feature/issue-7-player-self-profile-read",
-  "backendCommit": "da997b5cca30052f7508aa9916baab64ab25b1dc",
+  "backendRef": "dev",
+  "backendCommit": "cf9ff434b652b6336d2876d522860c88a0bd1b21",
   "canonicalPath": "v2/openapi/level5-v2.openapi.json"
 }
