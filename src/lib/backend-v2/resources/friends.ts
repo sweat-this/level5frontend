@@ -22,6 +22,7 @@ export function listFriends(
   return request<FriendSummary[]>({
     method: "GET",
     path: "/api/v2/friends",
+    operationName: "friends.list",
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
     signal,
@@ -35,6 +36,7 @@ export function listIncoming(
   return request<FriendRequestListItem[]>({
     method: "GET",
     path: "/api/v2/friends/requests/incoming",
+    operationName: "friends.listIncoming",
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
     signal,
@@ -48,6 +50,7 @@ export function listOutgoing(
   return request<FriendRequestListItem[]>({
     method: "GET",
     path: "/api/v2/friends/requests/outgoing",
+    operationName: "friends.listOutgoing",
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
     signal,
@@ -61,6 +64,7 @@ export function sendRequest(
   return request<FriendRequestSummary>({
     method: "POST",
     path: "/api/v2/friends/requests",
+    operationName: "friends.sendRequest",
     body: { toPlayerId },
     accessToken,
   });
@@ -73,6 +77,7 @@ export function accept(
   return request<undefined>({
     method: "POST",
     path: `/api/v2/friends/requests/${encodeURIComponent(requestId)}/accept`,
+    operationName: "friends.accept",
     accessToken,
   });
 }
@@ -84,6 +89,7 @@ export function decline(
   return request<undefined>({
     method: "POST",
     path: `/api/v2/friends/requests/${encodeURIComponent(requestId)}/decline`,
+    operationName: "friends.decline",
     accessToken,
   });
 }
@@ -95,6 +101,7 @@ export function cancel(
   return request<undefined>({
     method: "POST",
     path: `/api/v2/friends/requests/${encodeURIComponent(requestId)}/cancel`,
+    operationName: "friends.cancel",
     accessToken,
   });
 }
@@ -106,6 +113,7 @@ export function remove(
   return request<undefined>({
     method: "DELETE",
     path: `/api/v2/friends/${encodeURIComponent(playerId)}`,
+    operationName: "friends.remove",
     accessToken,
   });
 }

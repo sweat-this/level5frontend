@@ -29,6 +29,12 @@ export class FakeWebSessionStore implements WebSessionStore {
   compareAndSwapFaultMode: () => CasFaultMode = () => "none";
   deleteFault: () => boolean = () => false;
 
+  // Issue #10: lets a test deterministically interleave two concurrent coordinator calls (e.g.
+  // "logout while a getAccessToken() is still awaiting find()") by pausing a method until the
+  // test's own gate promise resolves - a controlled stand-in for real store latency, not a timer.
+  findGate: (() => Promise<void>) | undefined;
+  compareAndSwapGate: (() => Promise<void>) | undefined;
+
   async create(session: WebSession): Promise<void> {
     this.createCallCount += 1;
     if (this.createFault()) {
@@ -39,10 +45,18 @@ export class FakeWebSessionStore implements WebSessionStore {
 
   async find(sessionIdHash: string): Promise<WebSession | null> {
     this.findCallCount += 1;
+    // Reads the snapshot *before* gating (not after) - a real in-flight request has already
+    // received its data off the wire by the time a concurrent logout() could delete it, so
+    // pausing here-and-returning-the-already-read-value is what models "already in flight,
+    // finishing after logout's delete" (issue #10), not a read that itself observes the delete.
+    const result = await this.inner.find(sessionIdHash);
+    if (this.findGate) {
+      await this.findGate();
+    }
     if (this.findFault()) {
       throw new SessionStoreUnavailableError("fake: find unavailable");
     }
-    return this.inner.find(sessionIdHash);
+    return result;
   }
 
   async compareAndSwap(
@@ -51,6 +65,9 @@ export class FakeWebSessionStore implements WebSessionStore {
     replacement: WebSession,
   ): Promise<boolean> {
     this.compareAndSwapCallCount += 1;
+    if (this.compareAndSwapGate) {
+      await this.compareAndSwapGate();
+    }
     const mode = this.compareAndSwapFaultMode();
     if (mode === "unavailable") {
       throw new SessionStoreUnavailableError(

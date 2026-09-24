@@ -23,6 +23,7 @@ export function getCurrentAccount(
   return request<CurrentAccount>({
     method: "GET",
     path: "/api/v2/me",
+    operationName: "account.me",
     accessToken,
     retry: options.retry,
     signal: options.signal,

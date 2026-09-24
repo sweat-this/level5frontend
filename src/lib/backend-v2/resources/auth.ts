@@ -25,6 +25,7 @@ export function register(
   return request<BackendCredentials>({
     method: "POST",
     path: "/api/v2/auth/register",
+    operationName: "auth.register",
     body: { username, password, displayName },
     ip,
     baseUrl,
@@ -40,6 +41,7 @@ export function login(
   return request<BackendCredentials>({
     method: "POST",
     path: "/api/v2/auth/login",
+    operationName: "auth.login",
     body: { username, password },
     ip,
     baseUrl,
@@ -54,6 +56,7 @@ export function refresh(
   return request<BackendCredentials>({
     method: "POST",
     path: "/api/v2/auth/refresh",
+    operationName: "auth.refresh",
     body: { refreshToken },
     ip,
     baseUrl,
@@ -62,12 +65,15 @@ export function refresh(
 
 export function logout(
   refreshToken: string,
+  ip?: ClientIpOverride,
   baseUrl?: string,
 ): Promise<TransportResult<undefined>> {
   return request<undefined>({
     method: "POST",
     path: "/api/v2/auth/logout",
+    operationName: "auth.logout",
     body: { refreshToken },
+    ip,
     baseUrl,
   });
 }

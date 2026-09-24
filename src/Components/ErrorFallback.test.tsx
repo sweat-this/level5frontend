@@ -12,4 +12,14 @@ describe("ErrorFallback", () => {
       "/",
     );
   });
+
+  it("shows no reference line when no digest is supplied", () => {
+    render(<ErrorFallback />);
+    expect(screen.queryByText(/Reference:/)).not.toBeInTheDocument();
+  });
+
+  it("shows the digest as a support reference when supplied (issue #10)", () => {
+    render(<ErrorFallback digest="abc123digest" />);
+    expect(screen.getByText("Reference: abc123digest")).toBeInTheDocument();
+  });
 });
