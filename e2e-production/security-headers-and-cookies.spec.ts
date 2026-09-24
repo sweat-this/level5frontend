@@ -58,6 +58,35 @@ test.describe("production security headers", () => {
     // top of the header/console assertions above.
     await expect(page.getByLabel("Username")).toBeVisible();
   });
+
+  test("no CSP violation occurs on an unmatched path (the not-found fallback)", async ({
+    page,
+  }) => {
+    // Regression coverage (issue #10 review): middleware.ts's static-public-route allowlist is
+    // keyed on exact pathname, which can never cover "any path that doesn't match a real route" -
+    // an unmatched path always resolves to app/not-found.tsx's fallback. If that page were ever
+    // statically rendered again (see its `export const dynamic = "force-dynamic"`), its inline
+    // hydration scripts would carry no nonce while middleware still sends a fresh nonce-only CSP
+    // header, and the browser would correctly refuse to execute them - reproduced with a real
+    // headless browser before this page was fixed to render dynamically.
+    const violations: string[] = [];
+    page.on("console", (msg) => {
+      if (/content security policy|refused to/i.test(msg.text())) {
+        violations.push(msg.text());
+      }
+    });
+    const pageErrors: string[] = [];
+    page.on("pageerror", (err) => pageErrors.push(err.message));
+
+    const response = await page.goto("/this-path-does-not-exist");
+    expect(response?.status()).toBe(404);
+    await page.waitForTimeout(500);
+
+    expect(violations).toEqual([]);
+    expect(pageErrors).toEqual([]);
+    await expect(page.getByText("Page not found")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Back home" })).toBeVisible();
+  });
 });
 
 test.describe("production session cookie", () => {
