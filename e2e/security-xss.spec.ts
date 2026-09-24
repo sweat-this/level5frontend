@@ -1,4 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
+import {
+  logout,
+  PASSWORD,
+  registerNewAccount,
+  uniqueUsername,
+} from "./test-support/ui";
 
 // Real-Backend-V2 XSS certification (issue #10). A static audit of src/ found no
 // dangerouslySetInnerHTML, no innerHTML/document.write, no untrusted URL construction, and no
@@ -10,34 +16,10 @@ import { expect, test, type Page } from "@playwright/test";
 // views it (friend request / player lookup), which is the actual stored-XSS threat model. See
 // e2e/account.spec.ts's header comment for the shared prerequisites (live local Backend V2, etc).
 
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
 // Under the 32-char Display Name limit (RegisterForm.tsx), and deliberately mixes an unclosed
 // script tag with an event-handler-bearing element - if this were ever interpreted as HTML
 // instead of text, either half would fire.
 const XSS_PAYLOAD = "<img src=x onerror=alert(1)>";
-
-async function registerNewAccount(
-  page: Page,
-  username: string,
-  displayName: string,
-): Promise<void> {
-  await page.goto("/account/register");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Display Name").fill(displayName);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
-
-async function logout(page: Page): Promise<void> {
-  await page.goto("/account");
-  await page.getByRole("button", { name: "Log out" }).click();
-  await expect(page).toHaveURL(/\/account\/login/);
-}
 
 /** Watches for the DOM-injection/script-execution side effects an HTML-interpreted payload
  *  would produce - independent of *where* the caller confirms the payload rendered as text. */

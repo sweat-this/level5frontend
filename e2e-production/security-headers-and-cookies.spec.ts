@@ -1,16 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { registerNewAccount, uniqueUsername } from "../e2e/test-support/ui";
 
 // Production-only certification (issue #10): the __Host-/Secure cookie attributes require a
 // real HTTPS origin to ever actually apply - cookie-policy.ts only sets `secure: true` and the
 // __Host- prefix when NODE_ENV=production, and a browser silently drops any cookie whose
 // attributes don't match its actual name-prefix/scheme requirements, so this can only be proven
 // through the HTTPS edge (see playwright.config.production.ts), never in the dev-mode suite.
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
 
 test.describe("production security headers", () => {
   test("HSTS, CSP, and the other minimum headers are present on a real HTTPS response", async ({
@@ -95,12 +90,7 @@ test.describe("production session cookie", () => {
     context,
   }) => {
     const username = uniqueUsername("e2ep_cookie");
-    await page.goto("/account/register");
-    await page.getByLabel("Username").fill(username);
-    await page.getByLabel("Display Name").fill("Prod Cookie Test");
-    await page.getByLabel("Password").fill(PASSWORD);
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL(/\/account$/);
+    await registerNewAccount(page, username, "Prod Cookie Test");
 
     const cookies = await context.cookies();
     const sessionCookie = cookies.find(
@@ -121,12 +111,7 @@ test.describe("production session cookie", () => {
     page,
   }) => {
     const username = uniqueUsername("e2ep_leak");
-    await page.goto("/account/register");
-    await page.getByLabel("Username").fill(username);
-    await page.getByLabel("Display Name").fill("Prod Leak Test");
-    await page.getByLabel("Password").fill(PASSWORD);
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL(/\/account$/);
+    await registerNewAccount(page, username, "Prod Leak Test");
 
     const jwtLike = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/;
 

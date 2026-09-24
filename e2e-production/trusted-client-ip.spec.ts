@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { PASSWORD, registerNewAccount, uniqueUsername } from "../e2e/test-support/ui";
 
 // Production-only certification of the trusted-client-IP contract's edge half (issue #10). The
 // HTTPS proxy (e2e-production/support/https-proxy.mjs) plays the trusted edge: it strips any
@@ -12,26 +13,39 @@ import { expect, test } from "@playwright/test";
 // deployment's edge is configured this way, or that direct-to-origin bypass of the edge is
 // impossible - both stay deployment-dependent (see the final report).
 
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
+const SPOOFED_IP = "198.51.100.7";
+// Matches playwright.config.production.ts's own LEVEL5_E2E_PROD_TRUSTED_IP_VALUE default - the
+// fixed value https-proxy.mjs is configured to overwrite the trusted header with.
+const EXPECTED_EDGE_IP =
+  process.env.LEVEL5_E2E_PROD_TRUSTED_IP_VALUE ?? "203.0.113.42";
 
 test.describe("trusted client IP - edge contract", () => {
-  test("a spoofed inbound copy of the trusted header does not break the request - the edge's overwrite wins", async ({
+  test("a spoofed inbound copy of the trusted header is actually stripped and overwritten, not merely harmless", async ({
     request,
   }) => {
     // A direct request through the edge (not a browser navigation), spoofing the one header the
-    // app trusts. https-proxy.mjs deletes any inbound copy before conditionally setting its own
-    // - if that stripping ever regressed and the app received two conflicting values, this would
-    // still not crash (resolveTrustedClientIp treats a malformed/comma-joined header as absent,
-    // never guesses), but a healthy 200 here is the actual end-to-end proof the edge's contract
-    // is being honored during this run.
+    // app trusts. https-proxy.mjs is supposed to delete any inbound copy before setting its own -
+    // asserting only a 200 here can't tell a healthy strip-and-overwrite apart from a silent
+    // pass-through of the spoofed value (page render doesn't depend on this header either way), so
+    // this reads the proxy's own diagnostic response header (set from the exact value it forwarded
+    // upstream - see https-proxy.mjs) to prove the spoofed value was actually replaced.
     const response = await request.get("/account/login", {
-      headers: { "x-e2e-trusted-ip": "198.51.100.7" },
+      headers: { "x-e2e-trusted-ip": SPOOFED_IP },
     });
     expect(response.status()).toBe(200);
+    const forwarded = response.headers()["x-e2e-proxy-forwarded-trusted-ip"];
+    expect(forwarded).toBe(EXPECTED_EDGE_IP);
+    expect(forwarded).not.toBe(SPOOFED_IP);
+  });
+
+  test("an inbound request with no trusted-header attempt still gets the edge's own value forwarded", async ({
+    request,
+  }) => {
+    const response = await request.get("/account/login");
+    expect(response.status()).toBe(200);
+    expect(response.headers()["x-e2e-proxy-forwarded-trusted-ip"]).toBe(
+      EXPECTED_EDGE_IP,
+    );
   });
 
   test("register, logout, and login all complete normally with the edge's trusted IP in place", async ({
@@ -42,12 +56,7 @@ test.describe("trusted client IP - edge contract", () => {
     // reads it, transport.ts forwards it as X-Forwarded-For to a real Backend V2) completes
     // without error for register, logout, and a subsequent login.
     const username = uniqueUsername("e2ep_ip");
-    await page.goto("/account/register");
-    await page.getByLabel("Username").fill(username);
-    await page.getByLabel("Display Name").fill("Prod IP Test");
-    await page.getByLabel("Password").fill(PASSWORD);
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL(/\/account$/);
+    await registerNewAccount(page, username, "Prod IP Test");
 
     await page.getByRole("button", { name: "Log out" }).click();
     await expect(page).toHaveURL(/\/account\/login/);

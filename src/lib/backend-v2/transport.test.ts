@@ -122,7 +122,35 @@ describe("transport", () => {
       expect(init.opentelemetry).toEqual({
         spanName: "backend.players.getByTag.fetch",
         propagateContext: true,
+        attributes: {
+          "http.url": BASE_URL,
+          "resource.name": "players.getByTag",
+        },
       });
+    });
+
+    it("never lets @vercel/otel's fetch auto-instrumentation attach a path/query-bearing URL as a span attribute", async () => {
+      // @vercel/otel's fetch instrumentation otherwise computes http.url/resource.name from the
+      // real request URL, which can embed a PlayerTag/series ID/player ID (issue #10's
+      // low-cardinality requirement) - the opentelemetry.attributes override in transport.ts must
+      // redact both to values that never contain options.path.
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      const sensitivePath = "/api/v2/players/by-tag/Somebody%234444";
+      await request({
+        method: "GET",
+        path: sensitivePath,
+        operationName: "players.getByTag",
+        baseUrl: BASE_URL,
+      });
+
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      const attributes = init.opentelemetry?.attributes as
+        Record<string, unknown> | undefined;
+      expect(attributes?.["http.url"]).not.toContain("Somebody");
+      expect(attributes?.["resource.name"]).not.toContain("Somebody");
+      for (const value of Object.values(attributes ?? {})) {
+        expect(String(value)).not.toContain(sensitivePath);
+      }
     });
 
     it("does not throw when the OTel SDK isn't registered (no-op tracer)", async () => {

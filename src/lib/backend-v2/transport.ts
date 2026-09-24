@@ -419,6 +419,16 @@ export async function request<T>(
     opentelemetry: {
       spanName: `backend.${options.operationName}.fetch`,
       propagateContext: true,
+      // @vercel/otel's fetch auto-instrumentation otherwise attaches the full request URL
+      // (including path) as the http.url/resource.name span attributes - several resource paths
+      // embed a series ID/Player Tag/player ID, which must never become a span attribute any
+      // more than it may become a metric dimension (see this function's own doc comment). `base`
+      // (origin only, no path) is never sensitive; operationName is already the low-cardinality
+      // identifier used for the span name itself.
+      attributes: {
+        "http.url": base,
+        "resource.name": options.operationName,
+      },
     },
   };
 
