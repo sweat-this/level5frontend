@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { clearSessionCookie } from "@/lib/account/session-cookie";
+import { resolveTrustedClientIp } from "@/lib/net/trusted-client-ip";
 import { sessionCookieName } from "@/lib/web-auth/cookie-policy";
 import { getAccountRuntimeConfig } from "@/lib/web-auth/config";
 import { isAllowedOrigin } from "@/lib/web-auth/origin-policy";
@@ -32,7 +33,8 @@ export async function logoutAction(): Promise<void> {
       // deletion are each already best-effort and recorded internally. This try/catch is a
       // last-resort safety net only (mirrors /api/auth-cert/logout's route.ts), so local cookie
       // invalidation below happens unconditionally regardless of this outcome.
-      await coordinator.logout(sessionId);
+      const clientIp = resolveTrustedClientIp(headerList);
+      await coordinator.logout(sessionId, clientIp ? { clientIp } : undefined);
     } catch {
       // Intentionally swallowed - see comment above.
     }

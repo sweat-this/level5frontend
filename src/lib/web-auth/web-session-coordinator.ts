@@ -2,6 +2,7 @@ import "server-only";
 import type {
   AccessTokenResponseDto,
   AuthBackendPort,
+  ClientIpOverride,
   CurrentAccountResponseDto,
 } from "./backend-auth-client";
 import { recordSessionEvent } from "./session-observability";
@@ -147,8 +148,12 @@ export class WebSessionCoordinator {
       Math.ceil(this.refreshLeaseMs / this.waitDelayMs);
   }
 
-  async login(username: string, password: string): Promise<LoginResult> {
-    const outcome = await this.backend.login(username, password);
+  async login(
+    username: string,
+    password: string,
+    ip?: ClientIpOverride,
+  ): Promise<LoginResult> {
+    const outcome = await this.backend.login(username, password, ip);
     if (outcome.kind !== "success") {
       return outcome;
     }
@@ -165,11 +170,13 @@ export class WebSessionCoordinator {
     username: string,
     password: string,
     displayName: string,
+    ip?: ClientIpOverride,
   ): Promise<RegisterResult> {
     const outcome = await this.backend.register(
       username,
       password,
       displayName,
+      ip,
     );
     if (outcome.kind !== "success") {
       return outcome;
@@ -232,7 +239,7 @@ export class WebSessionCoordinator {
    * diagnostic event on failure rather than propagate (see
    * docs/architecture/web-authentication.md's logout-failure semantics).
    */
-  async logout(sessionId: string): Promise<void> {
+  async logout(sessionId: string, ip?: ClientIpOverride): Promise<void> {
     const sessionIdHash = hashSessionId(sessionId);
 
     let session: WebSession | null;
@@ -250,7 +257,7 @@ export class WebSessionCoordinator {
 
     if (session) {
       // Best-effort - BackendAuthClient.logout never throws.
-      const revoked = await this.backend.logout(session.refreshToken);
+      const revoked = await this.backend.logout(session.refreshToken, ip);
       if (!revoked) {
         recordSessionEvent("logout_backend_revoke_failed");
       }
@@ -268,7 +275,10 @@ export class WebSessionCoordinator {
     }
   }
 
-  async getAccessToken(sessionId: string): Promise<AccessTokenResult> {
+  async getAccessToken(
+    sessionId: string,
+    ip?: ClientIpOverride,
+  ): Promise<AccessTokenResult> {
     const sessionIdHash = hashSessionId(sessionId);
     let session: WebSession | null;
     try {
@@ -285,10 +295,10 @@ export class WebSessionCoordinator {
     if (!session) {
       return { kind: "not_found" };
     }
-    return this.ensureFreshAccessToken(sessionIdHash, session, false);
+    return this.ensureFreshAccessToken(sessionIdHash, session, false, ip);
   }
 
-  async getMe(sessionId: string): Promise<MeResult> {
+  async getMe(sessionId: string, ip?: ClientIpOverride): Promise<MeResult> {
     const sessionIdHash = hashSessionId(sessionId);
 
     let initialSession: WebSession | null;
@@ -321,6 +331,7 @@ export class WebSessionCoordinator {
       sessionIdHash,
       initialSession,
       false,
+      ip,
     );
     if (tokenResult.kind !== "ready") {
       return tokenResult;
@@ -362,6 +373,7 @@ export class WebSessionCoordinator {
       sessionIdHash,
       session,
       true,
+      ip,
     );
     if (refreshResult.kind !== "ready") {
       return refreshResult;
@@ -409,6 +421,7 @@ export class WebSessionCoordinator {
     sessionIdHash: string,
     initialSession: WebSession,
     forceRefresh: boolean,
+    ip?: ClientIpOverride,
   ): Promise<AccessTokenResult> {
     let session = initialSession;
 
@@ -417,6 +430,7 @@ export class WebSessionCoordinator {
         sessionIdHash,
         session,
         forceRefresh && attempt === 0,
+        ip,
       );
       if (step.kind === "done") {
         return step.result;
@@ -432,6 +446,7 @@ export class WebSessionCoordinator {
     sessionIdHash: string,
     session: WebSession,
     skipFastPath: boolean,
+    ip?: ClientIpOverride,
   ): Promise<
     | { kind: "retry"; session: WebSession }
     | { kind: "done"; result: AccessTokenResult }
@@ -452,7 +467,7 @@ export class WebSessionCoordinator {
       if (claim.kind === "claimed") {
         return {
           kind: "done",
-          result: await this.performRefresh(sessionIdHash, claim.session),
+          result: await this.performRefresh(sessionIdHash, claim.session, ip),
         };
       }
       if (claim.kind === "unavailable") {
@@ -587,8 +602,12 @@ export class WebSessionCoordinator {
   private async performRefresh(
     sessionIdHash: string,
     refreshingSession: WebSession,
+    ip?: ClientIpOverride,
   ): Promise<AccessTokenResult> {
-    const outcome = await this.backend.refresh(refreshingSession.refreshToken);
+    const outcome = await this.backend.refresh(
+      refreshingSession.refreshToken,
+      ip,
+    );
 
     if (outcome.kind === "success") {
       const readySession = credentialsToReadySession(

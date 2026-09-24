@@ -61,7 +61,7 @@ describe("logoutAction", () => {
     await expect(logoutAction()).rejects.toThrow("REDIRECT:/account/login");
 
     expect(cookieStore.get(sessionCookieName())?.value).toBe("");
-    expect(logoutMock).toHaveBeenCalledWith("session-id");
+    expect(logoutMock).toHaveBeenCalledWith("session-id", undefined);
   });
 
   it("clears the cookie and redirects even without a session cookie present", async () => {
