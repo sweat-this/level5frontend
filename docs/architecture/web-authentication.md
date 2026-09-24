@@ -9,8 +9,11 @@ Backend V2 exposes a bearer-token auth API (`/api/v2/auth/{register,login,refres
 `GET /api/v2/me`) with short-lived (15 min) access tokens and long-lived (30 day),
 one-time-rotating refresh tokens protected by optimistic concurrency. The web frontend
 (`level5frontend`, Next.js 16 App Router, server-capable) needs an authenticated account
-portal. This document is the architecture for that portal's auth layer, certified before
-any account UI is built.
+portal. This document is the architecture for that portal's auth layer - originally certified
+before any account UI existed (issue #3); the account/profile/friends/challenges UI (issues
+#6-#9) and the production hardening pass (issue #10 - security headers/CSP, trusted client IP,
+OpenTelemetry, production E2E certification) are now built on top of exactly this architecture,
+described here as-implemented rather than as a forward-looking plan.
 
 ## Decision: browser holds no Backend V2 credential
 
