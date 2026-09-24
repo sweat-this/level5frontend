@@ -26,6 +26,32 @@ describe("transport", () => {
     vi.unstubAllGlobals();
   });
 
+  describe("request URL construction", () => {
+    it("strips a trailing slash from baseUrl so the joined URL has no double slash", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/api/v2/players/me",
+        baseUrl: "http://backend.test/",
+      });
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "http://backend.test/api/v2/players/me",
+      );
+    });
+
+    it("joins a baseUrl with no trailing slash unchanged", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/api/v2/players/me",
+        baseUrl: BASE_URL,
+      });
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "http://backend.test/api/v2/players/me",
+      );
+    });
+  });
+
   describe("ProblemDetails / error normalization", () => {
     it("classifies a 400 ProblemDetails with code and traceId", async () => {
       fetchMock.mockResolvedValue(

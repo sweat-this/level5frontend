@@ -267,7 +267,11 @@ async function attempt(
 export async function request<T>(
   options: RequestOptions,
 ): Promise<TransportResult<T>> {
-  const url = `${options.baseUrl ?? backendBaseUrl()}${options.path}`;
+  // options.path always starts with "/" - strip any trailing slash from the base so a
+  // LEVEL5_V2_API_BASE_URL configured with one (e.g. "https://backend.example.com/") can never
+  // produce a malformed "//api/..." URL.
+  const base = (options.baseUrl ?? backendBaseUrl()).replace(/\/$/, "");
+  const url = `${base}${options.path}`;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   const headers: Record<string, string> = {
