@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { Roboto } from "next/font/google";
 import { Grid } from "@mui/material";
 import ThemeRegistry from "@/lib/theme/ThemeRegistry";
@@ -38,17 +37,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Set by src/middleware.ts on every request (see the CSP nonce in headers.ts) - reading it
-  // here opts this layout, and therefore every route it wraps, into dynamic rendering.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
-
   return (
     <html lang="en" className={roboto.className}>
       <body>
-        <ThemeRegistry nonce={nonce}>
+        <ThemeRegistry>
           <QueryProvider>
             <Grid id="mainContainer">
               <Grid id="scrollableContent">{children}</Grid>

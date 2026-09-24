@@ -15,20 +15,29 @@ function requestFor(pathname: string): NextRequest {
 }
 
 describe("middleware", () => {
-  it("sets a Content-Security-Policy with a nonce and no legacy API/YouTube on the root route", () => {
-    const response = middleware(requestFor("/"));
+  it("uses a nonce-based script-src (no 'unsafe-inline') on a dynamically-rendered route", () => {
+    const response = middleware(requestFor("/account/login"));
     const csp = response.headers.get("Content-Security-Policy");
     expect(csp).toContain("script-src 'self' 'nonce-");
+    expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
+  });
+
+  it("uses 'unsafe-inline' (no nonce) on the statically-rendered root route - a per-request nonce can never be correct there", () => {
+    const response = middleware(requestFor("/"));
+    const csp = response.headers.get("Content-Security-Policy");
+    expect(csp).toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).not.toContain("nonce-");
     expect(csp).not.toContain("youtube.com");
   });
 
-  it("forwards the nonce as a request header so the root layout can read it", () => {
-    const response = middleware(requestFor("/"));
-    const csp = response.headers.get("Content-Security-Policy");
-    const match = csp?.match(/'nonce-([^']+)'/);
-    expect(match).toBeTruthy();
-    const nonce = match?.[1];
-    expect(response.headers.get("x-middleware-request-x-nonce")).toBe(nonce);
+  it("generates a different nonce per request on a dynamic route", () => {
+    const first = middleware(requestFor("/account/login")).headers.get(
+      "Content-Security-Policy",
+    );
+    const second = middleware(requestFor("/account/login")).headers.get(
+      "Content-Security-Policy",
+    );
+    expect(first).not.toBe(second);
   });
 
   it("adds the legacy API origin to connect-src on /level5", () => {
