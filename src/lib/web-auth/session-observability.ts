@@ -1,5 +1,5 @@
 import "server-only";
-import { meter } from "@/lib/otel/telemetry";
+import { getMeter } from "@/lib/otel/telemetry";
 
 /**
  * The full, fixed set of session-infrastructure diagnostic events (issue #5). Deliberately not
@@ -31,24 +31,32 @@ export type SessionEventFields = Readonly<
   Record<string, string | number | boolean>
 >;
 
-// Issue #10: one counter for every session-infrastructure event, `event` (and any other field -
-// all already constrained to SessionEventFields' low-cardinality contract above) as attributes.
-// Not a separate metrics taxonomy from the existing console.info sink below - the same call site,
-// the same vocabulary, a second sink.
-const sessionEventCounter = meter.createCounter("level5.session_events", {
-  description: "Session-infrastructure diagnostic events, by event name.",
-});
-
 /**
  * Structured, narrow logging - not a general telemetry SDK on its own, but as of issue #10 also
  * increments a low-cardinality OTel counter (safe to call unconditionally - see telemetry.ts).
  * `console.info` remains the sink of record for anything needing full-fidelity per-event detail;
  * every call site already goes through this one function, so both sinks stay in lockstep.
+ *
+ * The counter is created fresh from `getMeter()` on every call rather than cached at module
+ * scope: getMeter() itself re-resolves the current meter provider each time (see telemetry.ts),
+ * and an SDK's createCounter for an already-known instrument name is cheap/idempotent, so this is
+ * the only way a session event recorded before instrumentation.ts's register() completes doesn't
+ * get lost to a permanently-cached no-op counter.
  */
 export function recordSessionEvent(
   event: SessionEventName,
   fields?: SessionEventFields,
 ): void {
+  // Issue #10: one counter for every session-infrastructure event, `event` (and any other field -
+  // all already constrained to SessionEventFields' low-cardinality contract above) as attributes.
+  // Not a separate metrics taxonomy from the console.info sink below - the same call site, the
+  // same vocabulary, a second sink.
+  const sessionEventCounter = getMeter().createCounter(
+    "level5.session_events",
+    {
+      description: "Session-infrastructure diagnostic events, by event name.",
+    },
+  );
   sessionEventCounter.add(1, { event, ...fields });
 
   // `event`/`ts` spread last so a caller-supplied field can never shadow them - e.g. a stray

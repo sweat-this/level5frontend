@@ -16,7 +16,13 @@ const LEGACY_API_ROUTES = new Set([
 // correct on a page whose HTML is fixed at build time, so these get 'unsafe-inline' on
 // script-src instead (see headers.ts's module doc comment for why, and for the caching
 // regression trying to force them dynamic caused).
-const STATIC_PUBLIC_ROUTES = new Set([
+//
+// This list is hand-maintained and must stay in sync with which routes Next actually renders
+// statically - it has already drifted twice (a caching regression, then a CSP/hydration break on
+// /_not-found). middleware.static-routes.build.test.ts guards against silent drift going
+// forward: it reads .next/prerender-manifest.json after a real `next build` and fails if this
+// Set and Next's own static-route list ever disagree.
+export const STATIC_PUBLIC_ROUTES = new Set([
   "/",
   "/level5",
   "/level5/characters",

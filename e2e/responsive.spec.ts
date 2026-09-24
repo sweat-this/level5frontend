@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import { acceptDirect, loginDirect, seedChallenge } from "./test-support/backend-seed";
+import {
+  logout,
+  PASSWORD,
+  registerNewAccount,
+  uniqueUsername,
+} from "./test-support/ui";
 
 // Real-Backend-V2 responsive smoke certification (issue #10): targeted viewport coverage for the
 // social/challenge layouts specifically, not a 3x multiplication of the whole e2e/ suite - these
@@ -8,36 +14,11 @@ import { acceptDirect, loginDirect, seedChallenge } from "./test-support/backend
 // an actual <table> - both use Stack/List layouts - this is the runtime confirmation that those
 // layouts stay usable, not just present, at small viewports).
 
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
-
 const VIEWPORTS = {
   mobile: { width: 390, height: 844 }, // iPhone 12-class
   tablet: { width: 768, height: 1024 }, // iPad portrait
   desktop: { width: 1280, height: 800 },
 } as const;
-
-async function registerNewAccount(
-  page: Page,
-  username: string,
-  displayName: string,
-): Promise<void> {
-  await page.goto("/account/register");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Display Name").fill(displayName);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
-
-async function logout(page: Page): Promise<void> {
-  await page.goto("/account");
-  await page.getByRole("button", { name: "Log out" }).click();
-  await expect(page).toHaveURL(/\/account\/login/);
-}
 
 /**
  * No horizontal overflow within the app's own content - the classic symptom of a layout that

@@ -66,9 +66,10 @@ interface FriendRequestResponse {
  * exercising the real API while writing this fixture - CreateChallenge's contract requires it,
  * even though nothing in issue #9 exercises Create Challenge itself). Uses the existing Friends
  * API directly for the same reason as everything else in this file: fixture setup only, never
- * through frontend product code.
+ * through frontend product code. Exported for suites (e.g. accessibility.spec.ts's Remove Friend
+ * dialog test) that need an established friendship but no challenge on top of it.
  */
-async function establishFriendship(a: SeededPlayer, b: SeededPlayer): Promise<void> {
+export async function seedFriendship(a: SeededPlayer, b: SeededPlayer): Promise<void> {
   const request = await postJson<FriendRequestResponse>(
     "/api/v2/friends/requests",
     { toPlayerId: b.playerId },
@@ -94,7 +95,7 @@ export async function seedChallenge(
   opponent: SeededPlayer,
   totalGames = 1,
 ): Promise<SeededSeries> {
-  await establishFriendship(challenger, opponent);
+  await seedFriendship(challenger, opponent);
   return postJson<SeededSeries>(
     "/api/v2/series",
     {

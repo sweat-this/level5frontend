@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { PASSWORD, registerNewAccount, uniqueUsername } from "./test-support/ui";
 
 // Real-Backend-V2 E2E for issue #6's account vertical slice. Requires a live local Backend V2
 // (see v2/scripts/setup-local-dev.ps1 or equivalent) reachable at LEVEL5_E2E_BACKEND_BASE_URL
@@ -7,33 +8,14 @@ import { expect, test, type Page } from "@playwright/test";
 //   npx playwright test
 // See playwright.config.ts for the full env var surface (session-store backend, port, etc).
 
-function uniqueUsername(): string {
-  return `e2e_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
-
-async function registerNewAccount(
-  page: Page,
-  username: string,
-): Promise<void> {
-  await page.goto("/account/register");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Display Name").fill("E2E Player");
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-}
-
 test.describe("account vertical slice", () => {
   test("register -> dashboard -> reload -> logout -> protected redirect -> log back in", async ({
     page,
   }) => {
-    const username = uniqueUsername();
-
-    await registerNewAccount(page, username);
+    const username = uniqueUsername("e2e");
 
     // Successful registration establishes the session directly and redirects to /account.
-    await expect(page).toHaveURL(/\/account$/);
+    await registerNewAccount(page, username, "E2E Player");
     await expect(page.getByText(username)).toBeVisible();
     await expect(page.getByText("Active")).toBeVisible();
     await expect(page.getByText(/Member Since/)).toBeVisible();
@@ -62,9 +44,8 @@ test.describe("account vertical slice", () => {
   test("wrong password shows the generic invalid-credentials message", async ({
     page,
   }) => {
-    const username = uniqueUsername();
-    await registerNewAccount(page, username);
-    await expect(page).toHaveURL(/\/account$/);
+    const username = uniqueUsername("e2e");
+    await registerNewAccount(page, username, "E2E Player");
 
     await page.getByRole("button", { name: "Log out" }).click();
     await expect(page).toHaveURL(/\/account\/login/);

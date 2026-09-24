@@ -1,43 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { login, logout, registerNewAccount, uniqueUsername } from "./test-support/ui";
 
 // Real-Backend-V2 E2E for issue #7's player profile + exact Player Tag lookup. See
 // e2e/account.spec.ts's header comment for the shared prerequisites (live local Backend V2,
 // disposable/local V2 database, playwright.config.ts's env var surface).
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
-
-async function registerNewAccount(
-  page: Page,
-  username: string,
-  displayName: string,
-): Promise<void> {
-  await page.goto("/account/register");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Display Name").fill(displayName);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
-
-async function logout(page: Page): Promise<void> {
-  // The "Log out" button only lives on the /account dashboard, not every account/* page - see
-  // account/page.tsx. Navigating there first makes this helper safe to call from any page.
-  await page.goto("/account");
-  await page.getByRole("button", { name: "Log out" }).click();
-  await expect(page).toHaveURL(/\/account\/login/);
-}
-
-async function login(page: Page, username: string): Promise<void> {
-  await page.goto("/account/login");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Log in" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
 
 test.describe("player profile", () => {
   test("shows the initial Display Name and Player Tag, edits the Display Name, and persists across reload with the tag unchanged", async ({

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { PASSWORD, registerNewAccount, uniqueUsername } from "../e2e/test-support/ui";
 
 // Production-mode smoke certification of the major account flows (issue #10) - proves the real
 // HTTPS/production-cookie/CSP stack doesn't break what the dev-mode e2e/ suite already certifies
@@ -7,25 +8,6 @@ import { expect, test, type Page } from "@playwright/test";
 // specs), and one representative pass through each major flow is enough to catch an
 // infrastructure-layer regression (e.g. a cookie/header change silently breaking a real flow)
 // without duplicating logic-level coverage that already exists.
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
-
-async function registerNewAccount(
-  page: Page,
-  username: string,
-  displayName: string,
-): Promise<void> {
-  await page.goto("/account/register");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Display Name").fill(displayName);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
 
 test.describe("production account flow", () => {
   test("register -> dashboard -> reload -> logout -> login again", async ({

@@ -87,5 +87,21 @@ registers real accounts against whatever backend it's given.
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `dev`/`main` and on every pull
-request: build/lint/typecheck/unit tests, a Redis-integration job, a production-mode E2E job, and
-a supply-chain/security job. `dev` is protected — changes land through reviewed pull requests.
+request. Two jobs are **required merge gates** (`dev`'s branch protection requires exactly these
+two contexts):
+
+- `build` — `npm ci`, the contract-drift check, lint, typecheck, unit tests, and `next build`.
+- `redis-integration` — the same unit suite again with the real-Redis-backed session-store tests
+  enabled.
+
+Two more jobs run on every PR but are `continue-on-error` and **not** required checks, so either
+can fail outright without blocking a merge — see `ci.yml`'s own comments for why (a cross-repo,
+real-Backend-V2 E2E job and a dependency-graph-dependent scan are both judged not yet reliable
+enough to gate merges on):
+
+- `e2e-production` — checks out Backend V2, brings up real Postgres/Redis, and runs both the
+  dev-mode and production-mode Playwright suites against it.
+- `security` — a PR-diff dependency vulnerability scan (`actions/dependency-review-action`) plus
+  an informational `npm audit`.
+
+`dev` is protected — changes land through reviewed pull requests.

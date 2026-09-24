@@ -1,43 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
+import { login, logout, registerNewAccount, uniqueUsername } from "./test-support/ui";
 
 // Real-Backend-V2 E2E for issue #8's friendship lifecycle (find player -> send request ->
 // accept/decline/cancel -> friend list -> remove). See e2e/account.spec.ts's header comment for
 // the shared prerequisites (live local Backend V2, disposable/local V2 database,
 // playwright.config.ts's env var surface). Never run against production - registration here
 // creates real accounts.
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
-
-async function registerNewAccount(
-  page: Page,
-  username: string,
-  displayName: string,
-): Promise<void> {
-  await page.goto("/account/register");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Display Name").fill(displayName);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
-
-async function logout(page: Page): Promise<void> {
-  await page.goto("/account");
-  await page.getByRole("button", { name: "Log out" }).click();
-  await expect(page).toHaveURL(/\/account\/login/);
-}
-
-async function login(page: Page, username: string): Promise<void> {
-  await page.goto("/account/login");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Log in" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
 
 async function readOwnTag(page: Page): Promise<string> {
   await page.goto("/account/profile");

@@ -1,3 +1,4 @@
+import { metrics, trace } from "@opentelemetry/api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { recordUnhandledRequestError, registerOpenTelemetry } from "./register";
 
@@ -17,7 +18,19 @@ describe("registerOpenTelemetry", () => {
 });
 
 describe("registerOpenTelemetry with an OTLP endpoint configured", () => {
-  afterEach(() => {
+  afterEach(async () => {
+    // This block registers a real PeriodicExportingMetricReader (against an unreachable
+    // localhost:4318) via the global @opentelemetry/api singleton, which vi.resetModules() does
+    // NOT reset - it only clears the ES module cache, not OTel's process-global provider
+    // registration. Without shutting it down, its export timer keeps firing for the rest of this
+    // Vitest worker process, leaking connection-refused noise and an open handle across every
+    // later test in the same worker.
+    const meterProvider = metrics.getMeterProvider() as {
+      shutdown?: () => Promise<void>;
+    };
+    await meterProvider.shutdown?.();
+    metrics.disable();
+    trace.disable();
     vi.unstubAllEnvs();
     vi.resetModules();
   });

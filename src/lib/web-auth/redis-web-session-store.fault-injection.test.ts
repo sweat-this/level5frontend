@@ -192,5 +192,60 @@ describe("RedisWebSessionStore", () => {
 
       expect(await store.find("hash-1")).toEqual(original);
     });
+
+    // ping() is the /health/ready readiness-probe path (issue #38's "real readiness"), a
+    // different command than the data ones above - it must fail closed under the same latency
+    // budget rather than leaving readiness hanging past commandTimeoutMs.
+    it("ping() fails closed with SessionStoreUnavailableError when PING exceeds commandTimeoutMs", async () => {
+      const client = new FakeRedisSessionClient();
+      const store = new RedisWebSessionStore(client, keyring(), {
+        now: () => NOW,
+        commandTimeoutMs: 20,
+      });
+      client.delayMs = () => 200;
+
+      await expect(store.ping()).rejects.toBeInstanceOf(
+        SessionStoreUnavailableError,
+      );
+    });
+
+    it("ping() well within commandTimeoutMs still succeeds normally", async () => {
+      const client = new FakeRedisSessionClient();
+      const store = new RedisWebSessionStore(client, keyring(), {
+        now: () => NOW,
+        commandTimeoutMs: 200,
+      });
+      client.delayMs = () => 5;
+
+      await expect(store.ping()).resolves.toBeUndefined();
+    });
+  });
+
+  // Issue #10: RedisWebSessionStore.withTimeout() calls client.withAbortSignal(signal) fresh
+  // immediately before every single command - a real @redis/client's equivalent returns a new,
+  // independently-scoped command builder each time, never a shared mutable object. The fake must
+  // match that: two views obtained from two different withAbortSignal() calls must never be the
+  // same object (which would let a later call silently repoint an earlier one's abort signal).
+  describe("withAbortSignal returns independently-scoped views (issue #10)", () => {
+    it("two views from two different calls are distinct objects, each bound to its own signal", async () => {
+      const client = new FakeRedisSessionClient();
+      const controllerA = new AbortController();
+      const controllerB = new AbortController();
+
+      const viewA = client.withAbortSignal(controllerA.signal);
+      const viewB = client.withAbortSignal(controllerB.signal);
+
+      expect(viewA).not.toBe(viewB);
+      expect(viewA).not.toBe(client);
+
+      // Proves it's not just distinct-but-still-cross-wired: aborting B's controller must never
+      // affect a command already in flight on A.
+      client.delayMs = () => 50;
+      const pendingOnA = viewA.get("some-key");
+      controllerB.abort(new Error("B aborted"));
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await expect(pendingOnA).resolves.toBeNull();
+    });
   });
 });
