@@ -65,3 +65,175 @@ jobs:
       - run: npm run test:redis
         env:
           LEVEL5_WEB_SESSION_REDIS_URL: redis://localhost:6379
+
+  e2e-production:
+    runs-on: ubuntu-latest
+    # A full real-Backend-V2 pass (issue #10): checks out sweat-this/Level5Backend alongside this
+    # repo, brings up a real Postgres + Redis, runs Backend V2's own EF Core migrations, starts it
+    # for real, then runs both the dev-mode (e2e/) and production-mode (e2e-production/) Playwright
+    # suites against it. Informational for now (continue-on-error below) - not yet a required
+    # merge gate, since it's the newest and most cross-repo-dependent job here (see "Do not make
+    # optional/manual diagnostics required merge gates until they are deterministic").
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: level5
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: level5_v2
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7.4.11-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+        with:
+          path: frontend
+
+      - name: Checkout Backend V2 (dev)
+        uses: actions/checkout@v4
+        with:
+          repository: sweat-this/Level5Backend
+          ref: dev
+          path: backend
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 10.*
+
+      - name: Restore Backend V2 NuGet packages
+        working-directory: backend
+        run: dotnet restore v2/Level5BackendV2.sln
+
+      - name: Apply Backend V2 EF Core migrations
+        working-directory: backend
+        run: >-
+          dotnet ef database update
+          --project v2/src/Level5.Infrastructure
+          --startup-project v2/src/Level5.Api
+        env:
+          ConnectionStrings__DefaultConnection: "Host=127.0.0.1;Port=5432;Database=level5_v2;Username=level5;Password=ci-password"
+
+      - name: Generate a CI-only JWT signing key
+        id: jwt
+        # Same shape as scripts/generate-jwt-key.ps1 (64 random bytes, base64) - generated fresh
+        # every run, never persisted past the job, never a real secret.
+        run: echo "key=$(openssl rand -base64 64)" >> "$GITHUB_OUTPUT"
+
+      - name: Start Backend V2
+        working-directory: backend
+        run: nohup dotnet run --project v2/src/Level5.Api --urls http://localhost:5250 > "$GITHUB_WORKSPACE/backend.log" 2>&1 &
+        env:
+          ConnectionStrings__DefaultConnection: "Host=127.0.0.1;Port=5432;Database=level5_v2;Username=level5;Password=ci-password"
+          Jwt__Key: ${{ steps.jwt.outputs.key }}
+          ASPNETCORE_ENVIRONMENT: Development
+
+      - name: Wait for Backend V2 to accept requests
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:5250/api/v2/auth/login -H "content-type: application/json" -d '{}') || code=000
+            if [ "$code" != "000" ]; then
+              echo "Backend V2 responded ($code) after $i attempt(s)."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend V2 never responded - see backend.log"
+          cat "$GITHUB_WORKSPACE/backend.log" || true
+          exit 1
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Dev-mode e2e suite
+        working-directory: frontend
+        run: npm run test:e2e
+        env:
+          CI: "true"
+          LEVEL5_E2E_BACKEND_BASE_URL: http://localhost:5250
+
+      - name: Production-mode e2e suite
+        working-directory: frontend
+        run: npm run test:e2e:production
+        env:
+          CI: "true"
+          LEVEL5_E2E_BACKEND_BASE_URL: http://localhost:5250
+
+      - name: Upload Backend V2 log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-v2-log
+          path: backend.log
+          if-no-files-found: ignore
+
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # PR-diff-based - flags newly-introduced high/critical-severity advisories without needing
+      # a live backend, so it stays fast and independent of e2e-production above. See
+      # docs/operations/frontend-production.md for the dependency-security response process this
+      # backs (an unfixed upstream advisory in an existing dependency is a judgment call, not an
+      # automatic merge block - only a *newly added* high/critical is).
+      # continue-on-error: confirmed via the GitHub API that this repo's dependency graph is
+      # populated (dependency-graph/sbom returns real data) and that Advanced Security - which
+      # actions/dependency-review-action relies on - "is always available for public repos" (the
+      # API's own error message when an explicit enable was attempted, since it's implicitly
+      # always on for a public repo like this one) - so the action's own
+      # "Dependency graph is enabled" rejection isn't a real, fixable configuration gap on this
+      # repo. Left enabled (not removed) since it may simply need the base ref's snapshot to
+      # finish processing on GitHub's side; non-blocking until it's proven to reliably pass.
+      - name: Dependency Review
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Informational only (continue-on-error): a known/unfixed upstream advisory with no
+      # available patch must never permanently redden this pipeline - see the response process
+      # doc referenced above for how those get triaged instead of silently ignored.
+      - name: npm audit (informational)
+        continue-on-error: true
+        run: npm audit --audit-level=high
