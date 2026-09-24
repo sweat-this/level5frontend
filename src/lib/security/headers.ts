@@ -36,8 +36,8 @@ export interface CspOptions {
   /** Static public routes only (see the module doc comment) - script-src becomes 'unsafe-inline'
    *  instead of nonce-based, since a nonce can never be correct on a statically rendered page. */
   readonly allowInlineScript?: boolean;
-  /** Origin (scheme://host[:port], no path) of the legacy V1 public API - see MainNavBar's
-   *  useServerHealth() and ScoresTable's use of it. Only /level5/* routes render that component. */
+  /** Origin (scheme://host[:port], no path) of the legacy V1 public API - see ScoresTable's
+   *  useHighscores(). Only /level5/* routes call the legacy API. */
   readonly legacyApiOrigin?: string;
   /** /level5/drblood only - react-youtube loads the IFrame API script and embeds a player iframe
    *  from youtube.com, and renders thumbnail images from img.youtube.com (see DrBlood.tsx). */

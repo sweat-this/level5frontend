@@ -1,20 +1,25 @@
-import { Grid } from "@mui/material";
-import MainNavBar from "@/Components/MainNavBar";
-import QueryProvider from "@/lib/query/QueryProvider";
+import GameLocalNav from "@/Components/platform/GameLocalNav";
 
-// @tanstack/react-query is only ever used here - MainNavBar's useServerHealth/useCurrentVersion
-// and ScoresTable's useHighscores (issue #10's bundle/perf review, measured: ~40KB of react-query
-// code was shipping to every route via the root layout, including / and /account/*, none of
-// which use it). Scoped to this layout instead of the root one, so only /level5/* pays for it.
+// Level 5's actual current routes only (issue #21) - /level5/modes and /level5/versus don't exist
+// yet and belong to issue #23, which also owns relabeling this navigation model (Overview/Modes/
+// Characters/Versus). /level5 itself is labeled "Scores" - that's what the page actually shows.
+const LEVEL5_NAV_ITEMS = [
+  { label: "Scores", href: "/level5" },
+  { label: "Characters", href: "/level5/characters" },
+  { label: "Dr Blood", href: "/level5/drblood" },
+];
+
 export default function Level5Layout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <QueryProvider>
-      <Grid id="header">
-        <MainNavBar />
-      </Grid>
+    <>
+      <GameLocalNav
+        gameLabel="Level 5"
+        gameHref="/level5"
+        items={LEVEL5_NAV_ITEMS}
+      />
       {children}
-    </QueryProvider>
+    </>
   );
 }
