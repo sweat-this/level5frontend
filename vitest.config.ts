@@ -14,8 +14,9 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
-    // e2e/** holds Playwright specs (issue #6) - a different test runner/config
-    // (playwright.config.ts), never Vitest's own default include glob.
-    exclude: [...configDefaults.exclude, "e2e/**"],
+    // e2e/** and e2e-production/** hold Playwright specs (issues #6 and #10) - a different test
+    // runner/config (playwright.config.ts / playwright.config.production.ts), never Vitest's own
+    // default include glob.
+    exclude: [...configDefaults.exclude, "e2e/**", "e2e-production/**"],
   },
 });
