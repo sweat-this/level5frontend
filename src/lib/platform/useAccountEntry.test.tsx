@@ -69,6 +69,23 @@ describe("useAccountEntry", () => {
     expect(screen.getByTestId("active")).toHaveTextContent("true");
   });
 
+  it("does not treat an unrelated route that merely starts with 'account' as the account section", async () => {
+    usePathnameMock.mockReturnValue("/accountability");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ signedIn: false }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<Probe />);
+
+    // Treated as an ordinary public/ambiguous route: falls back to Sign In and asks presence,
+    // rather than being deterministically (and wrongly) classified as Account.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(screen.getByTestId("label")).toHaveTextContent("Sign In");
+    expect(screen.getByTestId("active")).toHaveTextContent("false");
+  });
+
   it("defaults to Sign In on a public route, then upgrades to Account once presence resolves true", async () => {
     usePathnameMock.mockReturnValue("/");
     const fetchMock = vi.fn().mockResolvedValue({

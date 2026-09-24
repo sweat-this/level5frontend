@@ -53,14 +53,20 @@ export function useAccountEntry(): AccountEntryState {
   }, [pathname, deterministic]);
 
   const entry = deterministic ?? (presenceSignedIn ? ACCOUNT : SIGN_IN);
-  return { ...entry, active: pathname.startsWith("/account") };
+  return { ...entry, active: isAccountPath(pathname) };
+}
+
+// "/account" itself or a real descendant only - a bare startsWith("/account") would also match an
+// unrelated future route like "/accounts" or "/accountability".
+function isAccountPath(pathname: string): boolean {
+  return pathname === "/account" || pathname.startsWith("/account/");
 }
 
 function deterministicEntry(pathname: string): AccountEntryState | null {
   if (pathname === "/account/login" || pathname === "/account/register") {
     return SIGN_IN;
   }
-  if (pathname.startsWith("/account")) {
+  if (isAccountPath(pathname)) {
     return ACCOUNT;
   }
   return null;
