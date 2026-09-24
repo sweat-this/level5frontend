@@ -19,7 +19,16 @@ export default function AccountLayout({
   return (
     <Container maxWidth="sm" sx={{ paddingY: { xs: 4, sm: 8 } }}>
       <Stack spacing={4}>
-        <Stack component="nav" aria-label="Account" direction="row" spacing={3}>
+        <Stack
+          component="nav"
+          aria-label="Account"
+          direction="row"
+          spacing={{ xs: 2, sm: 3 }}
+          // Five links at spacing=3 overflow a narrow (~390px) viewport by ~10px (issue #10's
+          // responsive certification, e2e/responsive.spec.ts) - wrapping instead of scrolling
+          // horizontally keeps every link reachable without introducing page-level overflow.
+          sx={{ flexWrap: "wrap", rowGap: 1 }}
+        >
           {SUB_NAV_LINKS.map((link) => (
             <Link key={link.href} href={link.href}>
               {link.label}
