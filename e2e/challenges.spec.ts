@@ -8,6 +8,13 @@ import {
   startAttempt,
   type SeededPlayer,
 } from "./test-support/backend-seed";
+import {
+  login,
+  logout,
+  PASSWORD,
+  registerNewAccount,
+  uniqueUsername,
+} from "./test-support/ui";
 
 // Real-Backend-V2 E2E for issue #9's correspondence portal (incoming/outgoing/active/completed
 // challenges, accept/decline/cancel, series detail). See e2e/account.spec.ts's header comment for
@@ -18,39 +25,6 @@ import {
 // Challenge creation and gameplay are deliberately absent from the web portal (issue #9's
 // non-goals), so every fixture here is seeded by calling Backend V2's own existing HTTP API
 // directly via test-support/backend-seed.ts - never through frontend product code.
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
-
-async function registerNewAccount(
-  page: Page,
-  username: string,
-  displayName: string,
-): Promise<void> {
-  await page.goto("/account/register");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Display Name").fill(displayName);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
-
-async function logout(page: Page): Promise<void> {
-  await page.goto("/account");
-  await page.getByRole("button", { name: "Log out" }).click();
-  await expect(page).toHaveURL(/\/account\/login/);
-}
-
-async function login(page: Page, username: string): Promise<void> {
-  await page.goto("/account/login");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Log in" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
 
 async function readOwnTag(page: Page): Promise<string> {
   await page.goto("/account/profile");

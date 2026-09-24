@@ -43,6 +43,13 @@ async function generateCert() {
   return { key: pems.private, cert: pems.cert };
 }
 
+// Test-only diagnostic response header name (never a real header any deployment's edge would
+// add) - see the certification test's own comment for why this exists: proving the strip-then-
+// overwrite actually happened requires observing what this test-only proxy forwarded, since the
+// app itself deliberately never logs/exposes the resolved client IP (see trusted-client-ip.ts).
+const FORWARDED_TRUSTED_IP_DIAGNOSTIC_HEADER = "x-e2e-proxy-forwarded-trusted-ip";
+const ABSENT_SENTINEL = "(absent)";
+
 function proxyRequest(clientReq, clientRes) {
   const headers = { ...clientReq.headers };
   // The `Host` header the upstream Node http client sends is necessarily the internal
@@ -62,6 +69,9 @@ function proxyRequest(clientReq, clientRes) {
       headers[TRUSTED_IP_HEADER.toLowerCase()] = TRUSTED_IP_VALUE;
     }
   }
+  const forwardedTrustedIp = TRUSTED_IP_HEADER
+    ? (headers[TRUSTED_IP_HEADER.toLowerCase()] ?? ABSENT_SENTINEL)
+    : ABSENT_SENTINEL;
 
   const upstreamReq = httpRequest(
     {
@@ -72,7 +82,10 @@ function proxyRequest(clientReq, clientRes) {
       headers,
     },
     (upstreamRes) => {
-      clientRes.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
+      clientRes.writeHead(upstreamRes.statusCode ?? 502, {
+        ...upstreamRes.headers,
+        [FORWARDED_TRUSTED_IP_DIAGNOSTIC_HEADER]: forwardedTrustedIp,
+      });
       upstreamRes.pipe(clientRes);
     },
   );

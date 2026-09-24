@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { PASSWORD, registerNewAccount, uniqueUsername } from "./test-support/ui";
 
 // Real-Backend-V2 HTTP/browser-level CSRF certification (issue #10), on top of the existing
 // isAllowedOrigin() unit tests (origin-policy.test.ts).
@@ -15,25 +16,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 // browser-computed Origin already. See e2e/account.spec.ts's header comment for the shared
 // prerequisites (live local Backend V2, etc).
 
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-const PASSWORD = "Str0ng!Passw0rd#123";
 const EVIL_ORIGIN = "https://evil.example";
-
-async function registerNewAccount(
-  page: Page,
-  username: string,
-  displayName: string,
-): Promise<void> {
-  await page.goto("/account/register");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Display Name").fill(displayName);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/account$/);
-}
 
 interface CapturedRequest {
   readonly url: string;
