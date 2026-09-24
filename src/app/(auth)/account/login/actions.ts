@@ -13,6 +13,7 @@ import {
   UNKNOWN_FAILURE_MESSAGE,
 } from "@/lib/account/outcome-messages";
 import { sanitizeAccountReturnTo } from "@/lib/account/return-to";
+import { resolveTrustedClientIp } from "@/lib/net/trusted-client-ip";
 import { getAccountRuntimeConfig } from "@/lib/web-auth/config";
 import { isAllowedOrigin } from "@/lib/web-auth/origin-policy";
 import { tryGetWebSessionCoordinator } from "@/lib/web-auth/session-coordinator-runtime";
@@ -65,7 +66,12 @@ export async function loginAction(
   if (!coordinator) {
     return { status: "error", message: SESSION_STORE_UNAVAILABLE_MESSAGE };
   }
-  const result = await coordinator.login(username, password);
+  const clientIp = resolveTrustedClientIp(headerList);
+  const result = await coordinator.login(
+    username,
+    password,
+    clientIp ? { clientIp } : undefined,
+  );
 
   if (result.kind !== "success") {
     return { status: "error", message: loginFailureMessage(result.kind) };

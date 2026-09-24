@@ -13,6 +13,11 @@ const STATUS_ID = "display-name-form-status";
  * useActionState re-renders this component but never remounts the underlying <input>, so
  * whatever the player typed stays exactly as they left it. No extra state needed to "preserve
  * the value" on a transient failure.
+ *
+ * On success, the action returns Backend V2's server-confirmed (trimmed) `displayName`
+ * (issue #10). The input is keyed on that value so it remounts with the confirmed value as its
+ * new `defaultValue` - the one intentional exception to "never remounts", and the only case
+ * where the displayed value changes out from under the player.
  */
 export default function EditDisplayNameForm({
   initialDisplayName,
@@ -25,6 +30,9 @@ export default function EditDisplayNameForm({
   );
   const hasError = state.status === "error";
   const hasSuccess = state.status === "success";
+  const confirmedDisplayName =
+    hasSuccess && state.displayName ? state.displayName : undefined;
+  const displayValue = confirmedDisplayName ?? initialDisplayName;
 
   return (
     <Stack component="form" action={formAction} spacing={2}>
@@ -34,12 +42,13 @@ export default function EditDisplayNameForm({
       </div>
 
       <TextField
+        key={displayValue}
         id="profile-display-name"
         name="displayName"
         label="Display Name"
         required
         fullWidth
-        defaultValue={initialDisplayName}
+        defaultValue={displayValue}
         error={hasError}
         slotProps={{
           htmlInput: {
