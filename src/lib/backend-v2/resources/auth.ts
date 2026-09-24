@@ -65,6 +65,7 @@ export function refresh(
 
 export function logout(
   refreshToken: string,
+  ip?: ClientIpOverride,
   baseUrl?: string,
 ): Promise<TransportResult<undefined>> {
   return request<undefined>({
@@ -72,6 +73,7 @@ export function logout(
     path: "/api/v2/auth/logout",
     operationName: "auth.logout",
     body: { refreshToken },
+    ip,
     baseUrl,
   });
 }

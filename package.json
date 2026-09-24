@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:redis": "cross-env LEVEL5_REDIS_INTEGRATION_TEST=true vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:production": "playwright test --config=playwright.config.production.ts",
     "format": "prettier --write 'src/**/*.{ts,tsx,css}'",
     "prepare": "husky",
     "contracts:generate": "openapi-typescript contracts/level5-v2.openapi.json -o src/generated/level5-v2.ts",
@@ -74,6 +75,7 @@
     "lint-staged": "^15.2.2",
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.2.5",
+    "selfsigned": "^5.5.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10"

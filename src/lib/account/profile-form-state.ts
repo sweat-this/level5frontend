@@ -5,6 +5,8 @@
 export interface ProfileFormState {
   readonly status: "idle" | "error" | "success";
   readonly message?: string;
+  /** Backend V2's server-confirmed value on a successful Display Name update (issue #10). */
+  readonly displayName?: string;
 }
 
 export const initialProfileFormState: ProfileFormState = { status: "idle" };

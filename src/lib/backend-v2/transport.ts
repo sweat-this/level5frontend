@@ -22,7 +22,11 @@ export const DEFAULT_TIMEOUT_MS = 5000;
 const MAX_RETRY_DELAY_MS = 3000;
 
 export interface ClientIpOverride {
-  // Test-only: injects a trusted synthetic client IP as X-Forwarded-For so Backend V2's existing
+  // The real, trusted-edge-resolved client IP (issue #10) - see
+  // src/lib/net/trusted-client-ip.ts. Only ever sourced from the one configured trusted edge
+  // header, never raw/inbound X-Forwarded-For.
+  readonly clientIp?: string;
+  // Test-only: injects a synthetic client IP as X-Forwarded-For so Backend V2's existing
   // KnownProxies/KnownNetworks trust model can be exercised in certification. Never sourced from
   // an inbound browser request header - see docs/architecture/web-authentication.md.
   readonly testOnlyForwardedFor?: string;
@@ -387,14 +391,19 @@ function statusCodeAttribute<T>(
 export async function request<T>(
   options: RequestOptions,
 ): Promise<TransportResult<T>> {
-  const url = `${options.baseUrl ?? backendBaseUrl()}${options.path}`;
+  // options.path always starts with "/" - strip any trailing slash from the base so a
+  // LEVEL5_V2_API_BASE_URL configured with one (e.g. "https://backend.example.com/") can never
+  // produce a malformed "//api/..." URL.
+  const base = (options.baseUrl ?? backendBaseUrl()).replace(/\/$/, "");
+  const url = `${base}${options.path}`;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
+  // clientIp (real, trusted-edge-resolved) takes priority; testOnlyForwardedFor only exists for
+  // certification harnesses that don't run behind a real edge. A caller should never supply both.
+  const forwardedFor = options.ip?.clientIp ?? options.ip?.testOnlyForwardedFor;
   const headers: Record<string, string> = {
     ...traceHeaders(options.trace),
-    ...(options.ip?.testOnlyForwardedFor
-      ? { "x-forwarded-for": options.ip.testOnlyForwardedFor }
-      : {}),
+    ...(forwardedFor ? { "x-forwarded-for": forwardedFor } : {}),
     ...(options.accessToken
       ? { authorization: `Bearer ${options.accessToken}` }
       : {}),

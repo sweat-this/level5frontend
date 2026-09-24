@@ -26,6 +26,88 @@ describe("transport", () => {
     vi.unstubAllGlobals();
   });
 
+  describe("request URL construction", () => {
+    it("strips a trailing slash from baseUrl so the joined URL has no double slash", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/api/v2/players/me",
+        operationName: "test.op",
+        baseUrl: "http://backend.test/",
+      });
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "http://backend.test/api/v2/players/me",
+      );
+    });
+
+    it("joins a baseUrl with no trailing slash unchanged", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/api/v2/players/me",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+      });
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "http://backend.test/api/v2/players/me",
+      );
+    });
+  });
+
+  describe("client IP forwarding (issue #10)", () => {
+    function forwardedForHeader(call: unknown[]): string | null {
+      const init = call[1] as RequestInit;
+      return new Headers(init.headers).get("x-forwarded-for");
+    }
+
+    it("forwards ip.clientIp as X-Forwarded-For", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+        ip: { clientIp: "203.0.113.7" },
+      });
+      expect(forwardedForHeader(fetchMock.mock.calls[0])).toBe("203.0.113.7");
+    });
+
+    it("still supports testOnlyForwardedFor for certification harnesses", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+        ip: { testOnlyForwardedFor: "198.51.100.9" },
+      });
+      expect(forwardedForHeader(fetchMock.mock.calls[0])).toBe("198.51.100.9");
+    });
+
+    it("prefers clientIp over testOnlyForwardedFor when both are somehow supplied", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+        ip: { clientIp: "203.0.113.7", testOnlyForwardedFor: "198.51.100.9" },
+      });
+      expect(forwardedForHeader(fetchMock.mock.calls[0])).toBe("203.0.113.7");
+    });
+
+    it("sends no X-Forwarded-For when no IP is supplied", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+      });
+      expect(forwardedForHeader(fetchMock.mock.calls[0])).toBeNull();
+    });
+  });
+
   describe("telemetry (issue #10)", () => {
     it("passes a stable per-call span name and propagateContext via the fetch opentelemetry option", async () => {
       fetchMock.mockResolvedValue(jsonResponse(200, {}));

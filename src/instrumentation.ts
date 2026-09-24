@@ -3,7 +3,13 @@ import type { Instrumentation } from "next";
 /**
  * Next.js server startup + error hooks (issue #10). Runs once per server instance, before the
  * first request is served, gated to the Node runtime - the OTel Node SDK isn't Edge-compatible,
- * and this only needs to run once per process, not per Edge isolate.
+ * and production config validation only needs to happen once per process, not per Edge isolate.
+ *
+ * Config validation is production-only: dev/test keep the existing lazy, per-call-site
+ * validation (getAccountRuntimeConfig / getWebSessionStoreConfig), so `next build` and local
+ * development never require production secrets to be present. OpenTelemetry registration runs
+ * in every environment (with export itself gated on whether an OTLP endpoint is configured) so
+ * dev/test spans exist for local debugging even though nothing is exported.
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") {
@@ -12,6 +18,12 @@ export async function register(): Promise<void> {
 
   const { registerOpenTelemetry } = await import("@/lib/otel/register");
   registerOpenTelemetry();
+
+  if (process.env.NODE_ENV === "production") {
+    const { validateProductionRuntimeConfig } =
+      await import("@/lib/config/runtime-config");
+    validateProductionRuntimeConfig();
+  }
 }
 
 /**
