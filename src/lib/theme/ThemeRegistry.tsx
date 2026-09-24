@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Roboto } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import GlobalStyles from "@mui/material/GlobalStyles";
 
 // createTheme() (and the theme object it returns) contains functions, which can't cross the
 // Server->Client Component boundary as props - so theme creation has to live inside the client
@@ -26,7 +27,19 @@ export default function ThemeRegistry({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <AppRouterCacheProvider>
-      <ThemeProvider theme={theme}>{children}</ThemeProvider>
+      <ThemeProvider theme={theme}>
+        {/* Shared focus-visible treatment (issue #21) - not a broad CssBaseline reset, just a
+        single consistent keyboard-focus outline every interactive element on the shell inherits. */}
+        <GlobalStyles
+          styles={{
+            ":focus-visible": {
+              outline: `2px solid ${theme.palette.primary.main}`,
+              outlineOffset: "2px",
+            },
+          }}
+        />
+        {children}
+      </ThemeProvider>
     </AppRouterCacheProvider>
   );
 }

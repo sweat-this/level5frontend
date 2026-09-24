@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ScoresTable from "@/Components/ScoresTable";
+import QueryProvider from "@/lib/query/QueryProvider";
 
 const title = "Sweat This - High Scores";
 const description = "Browse Level 5 high scores and leaderboard stats.";
@@ -12,5 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <ScoresTable />;
+  return (
+    <QueryProvider>
+      <ScoresTable />
+    </QueryProvider>
+  );
 }
