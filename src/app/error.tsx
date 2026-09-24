@@ -2,9 +2,11 @@
 
 import ErrorFallback from "@/Components/ErrorFallback";
 
-export default function Error(_props: {
+export default function Error({
+  error,
+}: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <ErrorFallback />;
+  return <ErrorFallback digest={error.digest} />;
 }

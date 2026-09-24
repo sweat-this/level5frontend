@@ -45,6 +45,7 @@ export function getSeries(
   return request<SeriesDetails>({
     method: "GET",
     path: `/api/v2/series/${encodeURIComponent(seriesId)}`,
+    operationName: "series.get",
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
     signal,
@@ -53,6 +54,7 @@ export function getSeries(
 
 function listPage(
   path: string,
+  operationName: string,
   params: ListSeriesPageParams | undefined,
   accessToken: string,
   signal: AbortSignal | undefined,
@@ -60,6 +62,7 @@ function listPage(
   return request<SeriesSummaryPage>({
     method: "GET",
     path: `${path}${listQuery(params)}`,
+    operationName,
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
     signal,
@@ -71,7 +74,13 @@ export function listIncoming(
   params?: ListSeriesPageParams,
   signal?: AbortSignal,
 ): Promise<TransportResult<SeriesSummaryPage>> {
-  return listPage("/api/v2/series/incoming", params, accessToken, signal);
+  return listPage(
+    "/api/v2/series/incoming",
+    "series.listIncoming",
+    params,
+    accessToken,
+    signal,
+  );
 }
 
 export function listOutgoing(
@@ -79,7 +88,13 @@ export function listOutgoing(
   params?: ListSeriesPageParams,
   signal?: AbortSignal,
 ): Promise<TransportResult<SeriesSummaryPage>> {
-  return listPage("/api/v2/series/outgoing", params, accessToken, signal);
+  return listPage(
+    "/api/v2/series/outgoing",
+    "series.listOutgoing",
+    params,
+    accessToken,
+    signal,
+  );
 }
 
 export function listActive(
@@ -87,7 +102,13 @@ export function listActive(
   params?: ListSeriesPageParams,
   signal?: AbortSignal,
 ): Promise<TransportResult<SeriesSummaryPage>> {
-  return listPage("/api/v2/series/active", params, accessToken, signal);
+  return listPage(
+    "/api/v2/series/active",
+    "series.listActive",
+    params,
+    accessToken,
+    signal,
+  );
 }
 
 export function listCompleted(
@@ -95,7 +116,13 @@ export function listCompleted(
   params?: ListSeriesPageParams,
   signal?: AbortSignal,
 ): Promise<TransportResult<SeriesSummaryPage>> {
-  return listPage("/api/v2/series/completed", params, accessToken, signal);
+  return listPage(
+    "/api/v2/series/completed",
+    "series.listCompleted",
+    params,
+    accessToken,
+    signal,
+  );
 }
 
 /** Mutations - never retried automatically (issue #11). */
@@ -107,6 +134,7 @@ export function accept(
   return request<SeriesResponse>({
     method: "POST",
     path: `/api/v2/series/${encodeURIComponent(seriesId)}/accept`,
+    operationName: "series.accept",
     accessToken,
   });
 }
@@ -118,6 +146,7 @@ export function decline(
   return request<SeriesResponse>({
     method: "POST",
     path: `/api/v2/series/${encodeURIComponent(seriesId)}/decline`,
+    operationName: "series.decline",
     accessToken,
   });
 }
@@ -129,6 +158,7 @@ export function cancel(
   return request<SeriesResponse>({
     method: "POST",
     path: `/api/v2/series/${encodeURIComponent(seriesId)}/cancel`,
+    operationName: "series.cancel",
     accessToken,
   });
 }

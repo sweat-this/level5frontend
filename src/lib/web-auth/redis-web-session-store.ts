@@ -1,10 +1,41 @@
 import "server-only";
+import { SpanStatusCode } from "@opentelemetry/api";
+import { tracer } from "@/lib/otel/telemetry";
 import { decode, encode } from "./persisted-web-session";
 import { recordSessionEvent } from "./session-observability";
 import type { Keyring } from "./session-crypto";
 import { SessionStoreUnavailableError } from "./session-store-errors";
 import type { WebSession } from "./web-session";
 import type { WebSessionStore } from "./web-session-store";
+
+/**
+ * Wraps one session-store operation in a span (issue #10): operation name, duration (the span's
+ * own timing), and a low-cardinality outcome - never the Redis key or session hash/id, which
+ * every call site below only ever passes as an argument to the real Redis client, never to this.
+ */
+async function withStoreSpan<T>(
+  operation: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  return tracer.startActiveSpan(`session_store.${operation}`, async (span) => {
+    span.setAttribute("session_store.operation", operation);
+    try {
+      const result = await fn();
+      span.setAttribute("session_store.outcome", "success");
+      span.setStatus({ code: SpanStatusCode.OK });
+      return result;
+    } catch (err) {
+      span.setAttribute(
+        "session_store.outcome",
+        err instanceof SessionStoreUnavailableError ? "unavailable" : "error",
+      );
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw err;
+    } finally {
+      span.end();
+    }
+  });
+}
 
 const KEY_PREFIX = "level5:web-session:";
 
@@ -102,6 +133,10 @@ export class RedisWebSessionStore implements WebSessionStore {
   }
 
   async create(session: WebSession): Promise<void> {
+    return withStoreSpan("create", () => this.createInternal(session));
+  }
+
+  private async createInternal(session: WebSession): Promise<void> {
     const value = encode(session, session.sessionIdHash, this.keyring);
     let result: string | null;
     try {
@@ -127,6 +162,12 @@ export class RedisWebSessionStore implements WebSessionStore {
   }
 
   async find(sessionIdHash: string): Promise<WebSession | null> {
+    return withStoreSpan("find", () => this.findInternal(sessionIdHash));
+  }
+
+  private async findInternal(
+    sessionIdHash: string,
+  ): Promise<WebSession | null> {
     let raw: string | null;
     try {
       raw = await this.withTimeout().get(keyFor(sessionIdHash));
@@ -158,6 +199,16 @@ export class RedisWebSessionStore implements WebSessionStore {
     expectedRevision: number,
     replacement: WebSession,
   ): Promise<boolean> {
+    return withStoreSpan("compare_and_swap", () =>
+      this.compareAndSwapInternal(sessionIdHash, expectedRevision, replacement),
+    );
+  }
+
+  private async compareAndSwapInternal(
+    sessionIdHash: string,
+    expectedRevision: number,
+    replacement: WebSession,
+  ): Promise<boolean> {
     const value = encode(replacement, sessionIdHash, this.keyring);
     let reply: unknown;
     try {
@@ -176,6 +227,10 @@ export class RedisWebSessionStore implements WebSessionStore {
   }
 
   async delete(sessionIdHash: string): Promise<void> {
+    return withStoreSpan("delete", () => this.deleteInternal(sessionIdHash));
+  }
+
+  private async deleteInternal(sessionIdHash: string): Promise<void> {
     try {
       await this.withTimeout().del(keyFor(sessionIdHash));
     } catch (cause) {
@@ -185,6 +240,10 @@ export class RedisWebSessionStore implements WebSessionStore {
 
   /** Used only by /health/ready - see session-store-runtime.ts. */
   async ping(): Promise<void> {
+    return withStoreSpan("ping", () => this.pingInternal());
+  }
+
+  private async pingInternal(): Promise<void> {
     try {
       await this.withTimeout().ping();
     } catch (cause) {
