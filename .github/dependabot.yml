@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # npm dependencies - weekly, not daily: a restrained schedule that doesn't drown the repo in
+  # PRs. Major-version bumps are never auto-merged (no automerge workflow exists here) - each one
+  # is reviewed like any other dependency change, since a major can carry breaking API changes
+  # this project needs to actually adapt to.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # Every @mui/* package moves in lockstep in practice - one PR per wave instead of five
+      # simultaneous ones that would all conflict with each other in package-lock.json.
+      mui:
+        patterns:
+          - "@mui/*"
+      opentelemetry:
+        patterns:
+          - "@opentelemetry/*"
+          - "@vercel/otel"
+
+  # GitHub Actions versions used in .github/workflows/*.yml (e.g. actions/checkout, actions/setup-node).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
