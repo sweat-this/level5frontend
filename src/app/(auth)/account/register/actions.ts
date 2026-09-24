@@ -13,6 +13,7 @@ import {
   withReference,
 } from "@/lib/account/outcome-messages";
 import { sanitizeAccountReturnTo } from "@/lib/account/return-to";
+import { resolveTrustedClientIp } from "@/lib/net/trusted-client-ip";
 import { getAccountRuntimeConfig } from "@/lib/web-auth/config";
 import { isAllowedOrigin } from "@/lib/web-auth/origin-policy";
 import { tryGetWebSessionCoordinator } from "@/lib/web-auth/session-coordinator-runtime";
@@ -66,7 +67,13 @@ export async function registerAction(
   if (!coordinator) {
     return { status: "error", message: SESSION_STORE_UNAVAILABLE_MESSAGE };
   }
-  const result = await coordinator.register(username, password, displayName);
+  const clientIp = resolveTrustedClientIp(headerList);
+  const result = await coordinator.register(
+    username,
+    password,
+    displayName,
+    clientIp ? { clientIp } : undefined,
+  );
 
   if (result.kind !== "success") {
     return { status: "error", message: registerFailureMessage(result) };
