@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import { Grid } from "@mui/material";
 import ThemeRegistry from "@/lib/theme/ThemeRegistry";
-import QueryProvider from "@/lib/query/QueryProvider";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
@@ -44,12 +43,14 @@ export default function RootLayout({
     <html lang="en" className={roboto.className}>
       <body>
         <ThemeRegistry>
-          <QueryProvider>
-            <Grid id="mainContainer">
-              <Grid id="scrollableContent">{children}</Grid>
+          <Grid id="mainContainer">
+            {/* The one semantic <main> landmark for every page (issue #10) - none of the
+            nested layouts (account/level5/auth) render their own <main>, so this is safe app-wide. */}
+            <Grid id="scrollableContent" component="main">
+              {children}
             </Grid>
-            <Grid id="footer" />
-          </QueryProvider>
+          </Grid>
+          <Grid id="footer" />
         </ThemeRegistry>
       </body>
     </html>

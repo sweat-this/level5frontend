@@ -26,6 +26,118 @@ describe("transport", () => {
     vi.unstubAllGlobals();
   });
 
+  describe("request URL construction", () => {
+    it("strips a trailing slash from baseUrl so the joined URL has no double slash", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/api/v2/players/me",
+        operationName: "test.op",
+        baseUrl: "http://backend.test/",
+      });
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "http://backend.test/api/v2/players/me",
+      );
+    });
+
+    it("joins a baseUrl with no trailing slash unchanged", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/api/v2/players/me",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+      });
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "http://backend.test/api/v2/players/me",
+      );
+    });
+  });
+
+  describe("client IP forwarding (issue #10)", () => {
+    function forwardedForHeader(call: unknown[]): string | null {
+      const init = call[1] as RequestInit;
+      return new Headers(init.headers).get("x-forwarded-for");
+    }
+
+    it("forwards ip.clientIp as X-Forwarded-For", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+        ip: { clientIp: "203.0.113.7" },
+      });
+      expect(forwardedForHeader(fetchMock.mock.calls[0])).toBe("203.0.113.7");
+    });
+
+    it("still supports testOnlyForwardedFor for certification harnesses", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+        ip: { testOnlyForwardedFor: "198.51.100.9" },
+      });
+      expect(forwardedForHeader(fetchMock.mock.calls[0])).toBe("198.51.100.9");
+    });
+
+    it("prefers clientIp over testOnlyForwardedFor when both are somehow supplied", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+        ip: { clientIp: "203.0.113.7", testOnlyForwardedFor: "198.51.100.9" },
+      });
+      expect(forwardedForHeader(fetchMock.mock.calls[0])).toBe("203.0.113.7");
+    });
+
+    it("sends no X-Forwarded-For when no IP is supplied", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+      });
+      expect(forwardedForHeader(fetchMock.mock.calls[0])).toBeNull();
+    });
+  });
+
+  describe("telemetry (issue #10)", () => {
+    it("passes a stable per-call span name and propagateContext via the fetch opentelemetry option", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await request({
+        method: "GET",
+        path: "/api/v2/players/by-tag/Somebody%234444",
+        operationName: "players.getByTag",
+        baseUrl: BASE_URL,
+      });
+
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      expect(init.opentelemetry).toEqual({
+        spanName: "backend.players.getByTag.fetch",
+        propagateContext: true,
+      });
+    });
+
+    it("does not throw when the OTel SDK isn't registered (no-op tracer)", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, {}));
+      await expect(
+        request({
+          method: "GET",
+          path: "/x",
+          operationName: "test.op",
+          baseUrl: BASE_URL,
+        }),
+      ).resolves.toMatchObject({ kind: "success" });
+    });
+  });
+
   describe("ProblemDetails / error normalization", () => {
     it("classifies a 400 ProblemDetails with code and traceId", async () => {
       fetchMock.mockResolvedValue(
@@ -38,6 +150,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -59,6 +172,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result.kind).toBe("error");
@@ -81,6 +195,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -96,6 +211,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -111,6 +227,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -126,6 +243,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -145,6 +263,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -168,6 +287,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -189,6 +309,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -209,7 +330,12 @@ describe("transport", () => {
         }),
       );
       await expect(
-        request({ method: "GET", path: "/x", baseUrl: BASE_URL }),
+        request({
+          method: "GET",
+          path: "/x",
+          operationName: "test.op",
+          baseUrl: BASE_URL,
+        }),
       ).resolves.toMatchObject({
         kind: "error",
         error: {
@@ -225,6 +351,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({ kind: "error", error: { kind: "network" } });
@@ -244,6 +371,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         timeoutMs: 15,
       });
@@ -260,6 +388,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -278,6 +407,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -301,6 +431,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({
@@ -314,6 +445,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toEqual({ kind: "success", status: 204, data: undefined });
@@ -336,6 +468,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -354,6 +487,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: SAFE_READ_RETRY_POLICY,
       });
@@ -369,6 +503,7 @@ describe("transport", () => {
       const result = await request({
         method: "POST",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
       });
       expect(result).toMatchObject({
@@ -388,6 +523,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -404,6 +540,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -424,6 +561,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -439,6 +577,7 @@ describe("transport", () => {
       const result = await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         retry: fastRetry,
       });
@@ -447,6 +586,91 @@ describe("transport", () => {
         error: { kind: "http", httpStatus: 503 },
       });
       expect(fetchMock).toHaveBeenCalledTimes(fastRetry.maxAttempts);
+    });
+
+    // Issue #10 retry/timeout certification - pinning tests for behavior transport.ts already
+    // implements, not new logic. 503 above already covers isRetryableStatus's general shape;
+    // 408/502/504 are the other three members of that same allowlist and hadn't been exercised.
+    it.each([408, 502, 504])(
+      "retries a %i, the same as 503",
+      async (status) => {
+        fetchMock
+          .mockResolvedValueOnce(new Response(null, { status }))
+          .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+
+        const result = await request({
+          method: "GET",
+          path: "/x",
+          operationName: "test.op",
+          baseUrl: BASE_URL,
+          retry: fastRetry,
+        });
+        expect(result).toEqual({
+          kind: "success",
+          status: 200,
+          data: { ok: true },
+        });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it("bounded-retries an actual network failure (not just an HTTP status) and eventually succeeds", async () => {
+      fetchMock
+        .mockRejectedValueOnce(new TypeError("fetch failed"))
+        .mockRejectedValueOnce(new TypeError("fetch failed"))
+        .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+
+      const result = await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+        retry: fastRetry,
+      });
+      expect(result).toEqual({
+        kind: "success",
+        status: 200,
+        data: { ok: true },
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it("exhausts maxAttempts on a network failure that never recovers", async () => {
+      fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+
+      const result = await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+        retry: fastRetry,
+      });
+      expect(result).toEqual({ kind: "error", error: { kind: "network" } });
+      expect(fetchMock).toHaveBeenCalledTimes(fastRetry.maxAttempts);
+    });
+
+    it("never retries a timeout, even with a retry policy supplied", async () => {
+      fetchMock.mockImplementation(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () => {
+              reject(
+                new DOMException("The operation was aborted", "TimeoutError"),
+              );
+            });
+          }),
+      );
+
+      const result = await request({
+        method: "GET",
+        path: "/x",
+        operationName: "test.op",
+        baseUrl: BASE_URL,
+        timeoutMs: 15,
+        retry: fastRetry,
+      });
+      expect(result).toEqual({ kind: "error", error: { kind: "timeout" } });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -467,6 +691,7 @@ describe("transport", () => {
       const pending = request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         signal: controller.signal,
         retry: SAFE_READ_RETRY_POLICY,
@@ -485,6 +710,7 @@ describe("transport", () => {
       await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         trace: {
           traceparent:
@@ -505,6 +731,7 @@ describe("transport", () => {
       await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         trace: { traceparent: "not-a-real-traceparent" },
       });
@@ -518,6 +745,7 @@ describe("transport", () => {
       await request({
         method: "GET",
         path: "/x",
+        operationName: "test.op",
         baseUrl: BASE_URL,
         trace: {
           traceparent:

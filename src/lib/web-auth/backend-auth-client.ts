@@ -68,7 +68,7 @@ export interface AuthBackendPort {
     ip?: ClientIpOverride,
   ): Promise<LoginOutcome>;
   refresh(refreshToken: string, ip?: ClientIpOverride): Promise<RefreshOutcome>;
-  logout(refreshToken: string): Promise<boolean>;
+  logout(refreshToken: string, ip?: ClientIpOverride): Promise<boolean>;
   getMe(accessToken: string): Promise<MeOutcome>;
 }
 
@@ -185,8 +185,8 @@ export class BackendAuthClient implements AuthBackendPort {
   }
 
   /** Best-effort: never throws. Backend V2 logout failure must not block local invalidation. */
-  async logout(refreshToken: string): Promise<boolean> {
-    const result = await authResource.logout(refreshToken, this.baseUrl);
+  async logout(refreshToken: string, ip?: ClientIpOverride): Promise<boolean> {
+    const result = await authResource.logout(refreshToken, ip, this.baseUrl);
     return result.kind === "success";
   }
 

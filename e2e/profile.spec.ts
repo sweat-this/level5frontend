@@ -66,6 +66,24 @@ test.describe("player profile", () => {
     await expect(page.getByText(tag!)).toBeVisible();
   });
 
+  test("reconciles the field to Backend V2's trimmed name immediately, before any reload", async ({
+    page,
+  }) => {
+    const username = uniqueUsername("e2e_trim");
+    await registerNewAccount(page, username, "Original Name");
+
+    await page.goto("/account/profile");
+    await page.getByLabel(/^Display Name/).fill("  Padded Name  ");
+    await page.getByRole("button", { name: "Save" }).click();
+
+    // Reconciled from the mutation response itself (issue #10), not from a reload.
+    await expect(page.getByText("Display name updated.")).toBeVisible();
+    await expect(page.getByLabel(/^Display Name/)).toHaveValue("Padded Name");
+
+    await page.reload();
+    await expect(page.getByLabel(/^Display Name/)).toHaveValue("Padded Name");
+  });
+
   test("copies the Player Tag to the clipboard", async ({
     page,
     context,
@@ -155,5 +173,29 @@ test.describe("player lookup", () => {
   }) => {
     await page.goto("/account/players?tag=Somebody%234444");
     await expect(page).toHaveURL(/\/account\/login/);
+  });
+
+  test("a repeated ?tag= query param resolves to the first occurrence", async ({
+    page,
+  }) => {
+    const searcherUsername = uniqueUsername("e2e_repeated_tag");
+    await registerNewAccount(page, searcherUsername, "Repeated Tag Searcher");
+    await logout(page);
+
+    const targetUsername = uniqueUsername("e2e_repeated_target");
+    await registerNewAccount(page, targetUsername, "Repeated Tag Target");
+    await page.goto("/account/profile");
+    const tagLocator = page.getByText(/^[A-Za-z0-9_]+#\d{4}$/);
+    const targetTag = (await tagLocator.textContent())?.trim();
+    expect(targetTag).toBeTruthy();
+    await logout(page);
+
+    await login(page, searcherUsername);
+    await page.goto(
+      `/account/players?tag=${encodeURIComponent(targetTag!)}&tag=Nobody%239999`,
+    );
+
+    await expect(page.getByText("Repeated Tag Target")).toBeVisible();
+    await expect(page.getByText(targetTag!, { exact: true })).toBeVisible();
   });
 });
