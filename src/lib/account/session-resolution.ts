@@ -1,8 +1,9 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { CurrentAccountResponseDto } from "@/lib/web-auth/backend-auth-client";
 import { sessionCookieName } from "@/lib/web-auth/cookie-policy";
 import { tryGetWebSessionCoordinator } from "@/lib/web-auth/session-coordinator-runtime";
+import { resolveTrustedClientIp } from "@/lib/net/trusted-client-ip";
 
 export type AccountSessionResult =
   | { kind: "authenticated"; account: CurrentAccountResponseDto }
@@ -28,7 +29,11 @@ export async function resolveCurrentAccountSession(): Promise<AccountSessionResu
   if (!coordinator) {
     return { kind: "unavailable" };
   }
-  const result = await coordinator.getMe(sessionId);
+  const clientIp = resolveTrustedClientIp(await headers());
+  const result = await coordinator.getMe(
+    sessionId,
+    clientIp ? { clientIp } : undefined,
+  );
 
   switch (result.kind) {
     case "success":

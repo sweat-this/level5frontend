@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import { Grid } from "@mui/material";
 import ThemeRegistry from "@/lib/theme/ThemeRegistry";
-import QueryProvider from "@/lib/query/QueryProvider";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
@@ -44,12 +43,10 @@ export default function RootLayout({
     <html lang="en" className={roboto.className}>
       <body>
         <ThemeRegistry>
-          <QueryProvider>
-            <Grid id="mainContainer">
-              <Grid id="scrollableContent">{children}</Grid>
-            </Grid>
-            <Grid id="footer" />
-          </QueryProvider>
+          <Grid id="mainContainer">
+            <Grid id="scrollableContent">{children}</Grid>
+          </Grid>
+          <Grid id="footer" />
         </ThemeRegistry>
       </body>
     </html>

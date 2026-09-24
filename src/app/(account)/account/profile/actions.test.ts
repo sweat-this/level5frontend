@@ -137,9 +137,26 @@ describe("updateDisplayNameAction", () => {
     expect(state).toEqual({
       status: "success",
       message: "Display name updated.",
+      displayName: "New Name",
     });
     expect(updateMyProfileMock).toHaveBeenCalledWith("New Name", "at-1");
     expect(revalidatePathMock).toHaveBeenCalledWith("/account/profile");
+  });
+
+  it("reconciles to Backend V2's trimmed displayName, not the raw submitted value", async () => {
+    updateMyProfileMock.mockResolvedValue({
+      kind: "success",
+      status: 200,
+      data: { playerId: "p1", displayName: "Padded Name", tag: "New#1234" },
+    });
+
+    const state = await updateDisplayNameAction(
+      { status: "idle" },
+      formData("  Padded Name  "),
+    );
+
+    expect(state.status).toBe("success");
+    expect(state.displayName).toBe("Padded Name");
   });
 
   it("surfaces Backend V2's safe validation message on 400, with a trace reference", async () => {

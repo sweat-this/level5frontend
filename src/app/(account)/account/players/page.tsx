@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Alert, Button, Stack, TextField, Typography } from "@mui/material";
+import { firstQueryValue, type RawQueryValue } from "@/lib/search-params";
 import { PLAYERS_PATH, resolvePlayerLookup } from "./lookup";
 import SendFriendRequestForm from "./SendFriendRequestForm";
 
@@ -12,12 +13,13 @@ export const metadata: Metadata = {
 export default async function PlayersLookupPage({
   searchParams,
 }: {
-  readonly searchParams: Promise<{ readonly tag?: string }>;
+  readonly searchParams: Promise<{ readonly tag?: RawQueryValue }>;
 }) {
   const { tag: rawTag } = await searchParams;
   // Backend V2 owns tag normalization (issue #7) - trimming surrounding whitespace is the only
-  // client-side adjustment made here, never uppercasing/parsing/partial matching.
-  const tag = rawTag?.trim();
+  // client-side adjustment made here, never uppercasing/parsing/partial matching. A repeated
+  // `?tag=a&tag=b` deterministically resolves to the first occurrence.
+  const tag = firstQueryValue(rawTag)?.trim();
 
   return (
     <Stack spacing={4}>

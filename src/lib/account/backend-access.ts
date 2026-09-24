@@ -1,7 +1,8 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { sessionCookieName } from "@/lib/web-auth/cookie-policy";
 import { tryGetWebSessionCoordinator } from "@/lib/web-auth/session-coordinator-runtime";
+import { resolveTrustedClientIp } from "@/lib/net/trusted-client-ip";
 
 export type AuthenticatedBackendAccess =
   | { readonly kind: "ready"; readonly accessToken: string }
@@ -32,7 +33,11 @@ export async function resolveAuthenticatedBackendAccess(): Promise<Authenticated
   if (!coordinator) {
     return { kind: "unavailable" };
   }
-  const result = await coordinator.getAccessToken(sessionId);
+  const clientIp = resolveTrustedClientIp(await headers());
+  const result = await coordinator.getAccessToken(
+    sessionId,
+    clientIp ? { clientIp } : undefined,
+  );
 
   switch (result.kind) {
     case "ready":
