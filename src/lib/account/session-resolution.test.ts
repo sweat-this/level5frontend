@@ -3,9 +3,11 @@ import { sessionCookieName } from "@/lib/web-auth/cookie-policy";
 
 const getMeMock = vi.fn();
 const cookiesGetMock = vi.fn();
+const headersGetMock = vi.fn();
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({ get: cookiesGetMock })),
+  headers: vi.fn(async () => ({ get: headersGetMock })),
 }));
 
 const tryGetWebSessionCoordinatorMock = vi.fn(
