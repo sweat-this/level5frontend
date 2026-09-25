@@ -68,7 +68,13 @@ export default function PlatformHeader() {
                 key={destination.href}
                 href={destination.href}
                 aria-current={destination.active ? "page" : undefined}
-                sx={{ fontWeight: destination.active ? 700 : 500 }}
+                sx={{
+                  fontWeight: destination.active ? 700 : 500,
+                  // primary.main (the Button's default text-variant color) is only 4.22:1
+                  // against this AppBar's grey background - primary.dark clears WCAG AA's
+                  // 4.5:1 minimum for text (axe color-contrast, "serious").
+                  color: "primary.dark",
+                }}
               >
                 {destination.label}
               </ButtonLink>
@@ -81,6 +87,8 @@ export default function PlatformHeader() {
             sx={{
               marginLeft: "auto",
               fontWeight: accountEntry.active ? 700 : 500,
+              // See the primary-nav ButtonLinks above for why.
+              color: "primary.dark",
             }}
           >
             {accountEntry.label}
