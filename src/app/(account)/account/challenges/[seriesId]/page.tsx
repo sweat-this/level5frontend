@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Alert, Divider, Stack, Typography } from "@mui/material";
 import type { SeriesDetails } from "@/lib/backend-v2/contracts";
 import { resolveSeriesDetail } from "./reads";
-import { resolveWinnerLabel } from "./winner";
+import { hasWinner, resolveWinnerLabel } from "./winner";
 
 export const metadata: Metadata = {
   title: "Sweat This - Challenge Details",
@@ -86,10 +86,10 @@ function SeriesInfoSection({ series }: { readonly series: SeriesDetails }) {
       <Row label="Current Game" value={String(series.currentGameNumber)} />
       <Row label="Created" value={formatDateTime(series.createdAt)} />
       {series.completedAt !== null && (
-        <>
-          <Row label="Completed" value={formatDateTime(series.completedAt)} />
-          <Row label="Winner" value={resolveWinnerLabel(series)} />
-        </>
+        <Row label="Ended" value={formatDateTime(series.completedAt)} />
+      )}
+      {hasWinner(series) && (
+        <Row label="Winner" value={resolveWinnerLabel(series)} />
       )}
     </Stack>
   );

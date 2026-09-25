@@ -125,6 +125,25 @@ export function listCompleted(
   );
 }
 
+/**
+ * Every terminal correspondence record (Completed, Declined, Cancelled, Expired) either
+ * participant is in - the durable-history surface. Deliberately separate from `listCompleted`,
+ * which stays scoped to series that actually finished play.
+ */
+export function listHistory(
+  accessToken: string,
+  params?: ListSeriesPageParams,
+  signal?: AbortSignal,
+): Promise<TransportResult<SeriesSummaryPage>> {
+  return listPage(
+    "/api/v2/series/history",
+    "series.listHistory",
+    params,
+    accessToken,
+    signal,
+  );
+}
+
 /** Mutations - never retried automatically (issue #11). */
 
 export function accept(

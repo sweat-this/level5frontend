@@ -4,12 +4,14 @@ const listIncomingMock = vi.fn();
 const listOutgoingMock = vi.fn();
 const listActiveMock = vi.fn();
 const listCompletedMock = vi.fn();
+const listHistoryMock = vi.fn();
 
 vi.mock("@/lib/backend-v2/resources/series", () => ({
   listIncoming: (...args: unknown[]) => listIncomingMock(...args),
   listOutgoing: (...args: unknown[]) => listOutgoingMock(...args),
   listActive: (...args: unknown[]) => listActiveMock(...args),
   listCompleted: (...args: unknown[]) => listCompletedMock(...args),
+  listHistory: (...args: unknown[]) => listHistoryMock(...args),
 }));
 
 const { resolveChallengesList, CHALLENGES_LOGIN_REDIRECT } =
@@ -33,6 +35,7 @@ describe("resolveChallengesList", () => {
     ["outgoing", () => listOutgoingMock],
     ["active", () => listActiveMock],
     ["completed", () => listCompletedMock],
+    ["history", () => listHistoryMock],
   ] as const)(
     "calls exactly the %s list resource for that view",
     async (view, mock) => {
@@ -42,6 +45,7 @@ describe("resolveChallengesList", () => {
         listOutgoingMock,
         listActiveMock,
         listCompletedMock,
+        listHistoryMock,
       ].filter((candidate) => candidate !== mock());
 
       await resolveChallengesList(view, undefined, "token");
