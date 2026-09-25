@@ -1,12 +1,15 @@
 import GameLocalNav from "@/Components/platform/GameLocalNav";
 
-// Level 5's actual current routes only (issue #21) - /level5/modes and /level5/versus don't exist
-// yet and belong to issue #23, which also owns relabeling this navigation model (Overview/Modes/
-// Characters/Versus). /level5 itself is labeled "Scores" - that's what the page actually shows.
+// Level 5 local navigation (issue #23). The brand/home link (gameHref below) already resolves to
+// /level5, which is now the hub/overview - no separate "Overview" item is added merely to
+// duplicate that destination. Scores/Leaderboards and Dr Blood are deliberately left off primary
+// navigation: leaderboards stay unadvertised until a hosted production results path exists, and Dr
+// Blood remains discoverable from the hub instead (see /level5/page.tsx) rather than promoted to a
+// primary nav item.
 const LEVEL5_NAV_ITEMS = [
-  { label: "Scores", href: "/level5" },
+  { label: "Modes", href: "/level5/modes" },
   { label: "Characters", href: "/level5/characters" },
-  { label: "Dr Blood", href: "/level5/drblood" },
+  { label: "Versus", href: "/level5/versus" },
 ];
 
 export default function Level5Layout({

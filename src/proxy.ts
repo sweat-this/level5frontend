@@ -6,11 +6,10 @@ import {
   toOrigin,
 } from "@/lib/security/headers";
 
-const LEGACY_API_ROUTES = new Set([
-  "/level5",
-  "/level5/characters",
-  "/level5/drblood",
-]);
+// Legacy V1 public API (ScoresTable/useHighscores) - issue #23 relocated the only caller from
+// /level5 to /level5/leaderboards, so this is the only route that still needs connect-src access
+// to it. Re-inspect this set if a future page starts calling the legacy V1 API.
+const LEGACY_API_ROUTES = new Set(["/level5/leaderboards"]);
 
 // Statically rendered (see next.config.ts's build output) - a per-request nonce can never be
 // correct on a page whose HTML is fixed at build time, so these get 'unsafe-inline' on
@@ -25,7 +24,10 @@ const LEGACY_API_ROUTES = new Set([
 export const STATIC_PUBLIC_ROUTES = new Set([
   "/",
   "/level5",
+  "/level5/modes",
   "/level5/characters",
+  "/level5/versus",
+  "/level5/leaderboards",
   "/level5/drblood",
 ]);
 

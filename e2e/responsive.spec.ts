@@ -111,5 +111,54 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
       await assertNoHorizontalOverflow(page);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     });
+
+    // Issue #23's public Level 5 hub/modes/versus pages - no account/backend seeding needed,
+    // and (per that issue's requirements) these must work as cards/sections rather than
+    // desktop-only tables at every width, with a visible keyboard focus indicator.
+    test("Level 5 hub, modes, and versus stay usable with no horizontal overflow", async ({
+      page,
+    }) => {
+      for (const path of ["/level5", "/level5/modes", "/level5/versus"]) {
+        await page.goto(path);
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await expect(page.locator("table")).toHaveCount(0);
+        await assertNoHorizontalOverflow(page);
+      }
+    });
+
+    test("Level 5 local navigation is keyboard-reachable with a visible focus indicator", async ({
+      page,
+    }) => {
+      await page.goto("/level5");
+
+      const modesNavLink = page
+        .getByRole("navigation", { name: "Level 5 navigation" })
+        .getByRole("link", { name: "Modes" });
+
+      // Real Tab-driven reachability, not a programmatic .focus() call (which doesn't reliably
+      // trigger :focus-visible - see the outline check below). Bounded rather than an exact
+      // keystroke count: how many tab stops precede it varies by viewport (PlatformHeader's
+      // mobile menu button vs. its desktop nav row).
+      const MAX_TAB_STOPS = 40;
+      let reached = false;
+      for (let i = 0; i < MAX_TAB_STOPS; i += 1) {
+        await page.keyboard.press("Tab");
+        if (await modesNavLink.evaluate((el) => el === document.activeElement)) {
+          reached = true;
+          break;
+        }
+      }
+      expect(reached, "Modes nav link was not reached by keyboard Tab").toBe(
+        true,
+      );
+      await expect(modesNavLink).toBeFocused();
+
+      // The visible indicator itself - ThemeRegistry.tsx's global :focus-visible outline, not
+      // just "focus landed here" (outline is "none" outside :focus-visible).
+      const outlineStyle = await modesNavLink.evaluate(
+        (el) => getComputedStyle(el).outlineStyle,
+      );
+      expect(outlineStyle).not.toBe("none");
+    });
   });
 }

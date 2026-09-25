@@ -29,11 +29,16 @@ export default function ThemeRegistry({
     <AppRouterCacheProvider>
       <ThemeProvider theme={theme}>
         {/* Shared focus-visible treatment (issue #21) - not a broad CssBaseline reset, just a
-        single consistent keyboard-focus outline every interactive element on the shell inherits. */}
+        single consistent keyboard-focus outline every interactive element on the shell inherits.
+        !important is required (issue #23 code review): MUI's ButtonBase sets `outline: 0` on
+        `.MuiButtonBase-root` unconditionally, which is the same (0,1,0) selector specificity as
+        this bare `:focus-visible` rule - without !important the two are a pure insertion-order
+        coin flip, and MUI's own stylesheet was winning, leaving every MUI Button/IconButton/link
+        (nav items included) with no visible focus indicator at all despite this rule existing. */}
         <GlobalStyles
           styles={{
             ":focus-visible": {
-              outline: `2px solid ${theme.palette.primary.main}`,
+              outline: `2px solid ${theme.palette.primary.main} !important`,
               outlineOffset: "2px",
             },
           }}

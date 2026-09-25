@@ -109,6 +109,16 @@ test.describe("accessibility - critical flows", () => {
   });
 });
 
+test.describe("accessibility - Level 5 public hub (issue #23)", () => {
+  // No account/backend seeding needed - these are static, unauthenticated public pages.
+  for (const path of ["/level5", "/level5/modes", "/level5/versus"]) {
+    test(`${path}`, async ({ page }, testInfo) => {
+      await page.goto(path);
+      await assertNoAxeViolations(page, testInfo);
+    });
+  }
+});
+
 test.describe("keyboard and focus management", () => {
   test("the login form is fully operable by keyboard alone, in a sensible Tab order", async ({
     page,
