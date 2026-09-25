@@ -1,13 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { STATIC_PUBLIC_ROUTES } from "./middleware";
+import { STATIC_PUBLIC_ROUTES } from "./proxy";
 
-// middleware.ts's STATIC_PUBLIC_ROUTES is a hand-maintained mirror of which routes Next actually
+// proxy.ts's STATIC_PUBLIC_ROUTES is a hand-maintained mirror of which routes Next actually
 // renders statically - it has already drifted from reality twice (see that file's comment). This
 // only has something to check after a real production build, so it's a no-op (not a failure)
 // against a fresh checkout; wire `npm run build` before this suite in CI to make it count. Also
-// run manually with `npm run build && npx vitest run src/middleware.static-routes.build.test.ts`.
+// run manually with `npm run build && npx vitest run src/proxy.static-routes.build.test.ts`.
 const PRERENDER_MANIFEST_PATH = join(
   process.cwd(),
   ".next",

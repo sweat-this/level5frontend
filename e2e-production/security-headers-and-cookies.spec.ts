@@ -57,11 +57,11 @@ test.describe("production security headers", () => {
   test("no CSP violation occurs on an unmatched path (the not-found fallback)", async ({
     page,
   }) => {
-    // Regression coverage (issue #10 review): middleware.ts's static-public-route allowlist is
+    // Regression coverage (issue #10 review): proxy.ts's static-public-route allowlist is
     // keyed on exact pathname, which can never cover "any path that doesn't match a real route" -
     // an unmatched path always resolves to app/not-found.tsx's fallback. If that page were ever
     // statically rendered again (see its `export const dynamic = "force-dynamic"`), its inline
-    // hydration scripts would carry no nonce while middleware still sends a fresh nonce-only CSP
+    // hydration scripts would carry no nonce while the proxy still sends a fresh nonce-only CSP
     // header, and the browser would correctly refuse to execute them - reproduced with a real
     // headless browser before this page was fixed to render dynamically.
     const violations: string[] = [];

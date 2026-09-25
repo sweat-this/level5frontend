@@ -1,7 +1,7 @@
 /**
  * Security headers / CSP (issue #10). Plain functions with no "server-only" import - this needs
- * to be callable from middleware.ts (Edge runtime) as well as from Server Components, and must
- * stay clear of any Node-only API.
+ * to be callable from proxy.ts (Node.js runtime by default) as well as from Server Components,
+ * and must stay clear of any Node-only API.
  *
  * script-src is nonce-based only for routes that are already dynamically rendered
  * (`/account/*` - force-dynamic, or otherwise reading a Dynamic API for session resolution).
