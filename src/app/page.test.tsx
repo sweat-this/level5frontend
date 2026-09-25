@@ -22,18 +22,15 @@ describe("app/page.tsx (Sweat This homepage)", () => {
     ).toHaveAttribute("href", "/level5");
   });
 
-  it("presents Secret Robot without a fake or broken destination", () => {
+  it("presents Secret Robot with a working destination", () => {
     render(<Page />);
 
     expect(
       screen.getByRole("heading", { level: 3, name: "Secret Robot" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: /secret robot/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /secret robot/i }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("link", { name: "Explore Secret Robot" }),
+    ).toHaveAttribute("href", "/secret-robot");
   });
 
   it("provides secondary Create Account and Sign In entry points", () => {

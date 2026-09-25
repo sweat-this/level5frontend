@@ -31,7 +31,7 @@ describe("PlatformHeader", () => {
     expect(screen.getByRole("banner")).toBeInTheDocument();
   });
 
-  it("links to Sweat This (/) and Level 5 (/level5), and nothing for a route that doesn't exist yet", () => {
+  it("links to Sweat This (/), Level 5 (/level5), and Secret Robot (/secret-robot)", () => {
     usePathnameMock.mockReturnValue("/");
     stubFetchSignedOut();
     render(<PlatformHeader />);
@@ -44,8 +44,8 @@ describe("PlatformHeader", () => {
       within(primaryNav).getByRole("link", { name: "Level 5" }),
     ).toHaveAttribute("href", "/level5");
     expect(
-      within(primaryNav).queryByText(/secret robot/i),
-    ).not.toBeInTheDocument();
+      within(primaryNav).getByRole("link", { name: "Secret Robot" }),
+    ).toHaveAttribute("href", "/secret-robot");
   });
 
   it("marks Sweat This active on /", () => {
@@ -70,6 +70,17 @@ describe("PlatformHeader", () => {
     const primaryNav = screen.getByRole("navigation", { name: "Primary" });
     expect(
       within(primaryNav).getByRole("link", { name: "Level 5" }),
+    ).toHaveAttribute("aria-current", "page");
+  });
+
+  it("marks Secret Robot active on a /secret-robot descendant route", () => {
+    usePathnameMock.mockReturnValue("/secret-robot/world");
+    stubFetchSignedOut();
+    render(<PlatformHeader />);
+
+    const primaryNav = screen.getByRole("navigation", { name: "Primary" });
+    expect(
+      within(primaryNav).getByRole("link", { name: "Secret Robot" }),
     ).toHaveAttribute("aria-current", "page");
   });
 

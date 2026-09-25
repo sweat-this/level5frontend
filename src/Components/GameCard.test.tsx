@@ -24,14 +24,14 @@ describe("GameCard", () => {
   it("stays a non-interactive presentation with no action provided", () => {
     render(
       <GameCard
-        headingId="secret-robot-heading"
-        title="Secret Robot"
-        description="Secret Robot is a Sweat This game."
+        headingId="untitled-heading"
+        title="Untitled Game"
+        description="A game with no destination yet."
       />,
     );
 
     expect(
-      screen.getByRole("heading", { level: 3, name: "Secret Robot" }),
+      screen.getByRole("heading", { level: 3, name: "Untitled Game" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
