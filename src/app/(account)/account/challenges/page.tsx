@@ -44,6 +44,7 @@ const VIEW_TABS: readonly {
   { view: "outgoing", label: "Outgoing" },
   { view: "active", label: "Active" },
   { view: "completed", label: "Completed" },
+  { view: "history", label: "History" },
 ];
 
 const EMPTY_MESSAGES: Readonly<Record<ChallengesView, string>> = {
@@ -51,6 +52,7 @@ const EMPTY_MESSAGES: Readonly<Record<ChallengesView, string>> = {
   outgoing: "No outgoing challenges.",
   active: "No active series.",
   completed: "No completed series.",
+  history: "No challenge history yet.",
 };
 
 // Changing category always drops any existing cursor (issue #9's "view change removes cursor").
@@ -244,6 +246,24 @@ function CompletedRow({ series }: { readonly series: SeriesSummary }) {
   );
 }
 
+function HistoryRow({ series }: { readonly series: SeriesSummary }) {
+  return (
+    <Stack component="li" spacing={1} sx={{ listStyle: "none" }}>
+      <ParticipantsLine series={series} />
+      <Typography variant="body2" color="text.secondary">
+        {series.status} · Best of {series.totalGames} · Created{" "}
+        {formatDate(series.createdAt)}
+      </Typography>
+      <Link
+        href={`/account/challenges/${series.id}`}
+        aria-label={`View details for ${series.status.toLowerCase()} series between ${series.challenger.tag} and ${series.opponent.tag}`}
+      >
+        View Details
+      </Link>
+    </Stack>
+  );
+}
+
 function ChallengesListSection({
   view,
   result,
@@ -295,6 +315,8 @@ function ChallengesListSection({
             return <ActiveRow key={series.id} series={series} />;
           case "completed":
             return <CompletedRow key={series.id} series={series} />;
+          case "history":
+            return <HistoryRow key={series.id} series={series} />;
         }
       })}
     </Stack>

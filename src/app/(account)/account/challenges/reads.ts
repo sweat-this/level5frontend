@@ -46,6 +46,7 @@ const LIST_BY_VIEW: Readonly<
   outgoing: SeriesApi.listOutgoing,
   active: SeriesApi.listActive,
   completed: SeriesApi.listCompleted,
+  history: SeriesApi.listHistory,
 };
 
 function mapListError(error: TransportError): ChallengesListResult {

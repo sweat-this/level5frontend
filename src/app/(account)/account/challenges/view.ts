@@ -8,13 +8,15 @@ import { firstQueryValue, type RawQueryValue } from "@/lib/search-params";
 export type { RawQueryValue };
 export { firstQueryValue };
 
-export type ChallengesView = "incoming" | "outgoing" | "active" | "completed";
+export type ChallengesView =
+  "incoming" | "outgoing" | "active" | "completed" | "history";
 
 const VIEWS: readonly ChallengesView[] = [
   "incoming",
   "outgoing",
   "active",
   "completed",
+  "history",
 ];
 
 export const DEFAULT_VIEW: ChallengesView = "incoming";
