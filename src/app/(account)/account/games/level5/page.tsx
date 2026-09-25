@@ -71,7 +71,7 @@ export default async function Level5GameDataPage() {
           borderRadius: 1,
         }}
       >
-        <Typography id="challenges-heading" sx={{ fontWeight: "bold" }}>
+        <Typography id="challenges-heading" variant="h6" component="h2">
           <Link href="/account/challenges">Challenges</Link>
         </Typography>
         <Typography variant="body2" color="text.secondary">
