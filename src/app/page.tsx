@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 // Sweat This platform homepage (issue #22) - static Server Component, games-first: platform
 // identity, then Level 5 and Secret Robot, then secondary Create Account/Sign In entry points.
-// Secret Robot has no real destination or approved imagery/description yet (issue #24), so its
-// card stays a non-interactive, non-focusable presentation rather than linking anywhere.
+// Secret Robot now has a real destination (issue #24); it still has no approved imagery, so its
+// card stays text-first like Level 5's description-only pattern, just with an image omitted.
 export default function Page() {
   return (
     <Container maxWidth="lg" sx={{ paddingY: { xs: 4, md: 6 } }}>
@@ -67,7 +67,8 @@ export default function Page() {
             <GameCard
               headingId="secret-robot-heading"
               title="Secret Robot"
-              description="Secret Robot is a Sweat This game."
+              description="Secret Robot is set in the Murder Lands, a vast, violent, and often absurd world of broken infrastructure, crime, and strange technology."
+              action={{ label: "Explore Secret Robot", href: "/secret-robot" }}
             />
           </Stack>
         </Box>

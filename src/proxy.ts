@@ -29,6 +29,9 @@ export const STATIC_PUBLIC_ROUTES = new Set([
   "/level5/versus",
   "/level5/leaderboards",
   "/level5/drblood",
+  "/secret-robot",
+  "/secret-robot/world",
+  "/secret-robot/characters",
 ]);
 
 export function proxy(request: NextRequest): NextResponse {

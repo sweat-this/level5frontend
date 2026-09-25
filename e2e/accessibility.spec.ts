@@ -63,7 +63,11 @@ test.describe("accessibility - critical flows", () => {
   });
 
   test("account dashboard", async ({ page }, testInfo) => {
-    await registerNewAccount(page, uniqueUsername("e2ea_dash"), "A11y Dashboard");
+    await registerNewAccount(
+      page,
+      uniqueUsername("e2ea_dash"),
+      "A11y Dashboard",
+    );
     await assertNoAxeViolations(page, testInfo);
   });
 
@@ -86,7 +90,11 @@ test.describe("accessibility - critical flows", () => {
   });
 
   test("challenges list", async ({ page }, testInfo) => {
-    await registerNewAccount(page, uniqueUsername("e2ea_chal"), "A11y Challenges");
+    await registerNewAccount(
+      page,
+      uniqueUsername("e2ea_chal"),
+      "A11y Challenges",
+    );
     await page.goto("/account/challenges");
     await assertNoAxeViolations(page, testInfo);
   });
@@ -112,6 +120,22 @@ test.describe("accessibility - critical flows", () => {
 test.describe("accessibility - Level 5 public hub (issue #23)", () => {
   // No account/backend seeding needed - these are static, unauthenticated public pages.
   for (const path of ["/level5", "/level5/modes", "/level5/versus"]) {
+    test(`${path}`, async ({ page }, testInfo) => {
+      await page.goto(path);
+      await assertNoAxeViolations(page, testInfo);
+    });
+  }
+});
+
+test.describe("accessibility - Secret Robot public hub (issue #24)", () => {
+  // No account/backend seeding needed - these are static, unauthenticated public pages. Also
+  // covers the accentColor seam GameLocalNav uses for Secret Robot's identity (error.dark) -
+  // axe's color-contrast rule fails here if that choice doesn't clear WCAG AA.
+  for (const path of [
+    "/secret-robot",
+    "/secret-robot/world",
+    "/secret-robot/characters",
+  ]) {
     test(`${path}`, async ({ page }, testInfo) => {
       await page.goto(path);
       await assertNoAxeViolations(page, testInfo);
