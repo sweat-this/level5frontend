@@ -19,7 +19,7 @@ const LEGACY_API_ROUTES = new Set([
 //
 // This list is hand-maintained and must stay in sync with which routes Next actually renders
 // statically - it has already drifted twice (a caching regression, then a CSP/hydration break on
-// /_not-found). middleware.static-routes.build.test.ts guards against silent drift going
+// /_not-found). proxy.static-routes.build.test.ts guards against silent drift going
 // forward: it reads .next/prerender-manifest.json after a real `next build` and fails if this
 // Set and Next's own static-route list ever disagree.
 export const STATIC_PUBLIC_ROUTES = new Set([
@@ -29,7 +29,7 @@ export const STATIC_PUBLIC_ROUTES = new Set([
   "/level5/drblood",
 ]);
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const allowInlineScript = STATIC_PUBLIC_ROUTES.has(pathname);
 

@@ -33,10 +33,10 @@ jobs:
       - run: npm run build
 
       # Only meaningful after the real production build above - see
-      # middleware.static-routes.build.test.ts's own comment. Fails the build if
-      # STATIC_PUBLIC_ROUTES (src/middleware.ts) ever drifts from what Next actually rendered
+      # proxy.static-routes.build.test.ts's own comment. Fails the build if
+      # STATIC_PUBLIC_ROUTES (src/proxy.ts) ever drifts from what Next actually rendered
       # statically, the class of bug this same PR sequence already hit twice.
-      - run: npx vitest run src/middleware.static-routes.build.test.ts
+      - run: npx vitest run src/proxy.static-routes.build.test.ts
 
   redis-integration:
     runs-on: ubuntu-latest
