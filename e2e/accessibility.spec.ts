@@ -89,6 +89,16 @@ test.describe("accessibility - critical flows", () => {
     await assertNoAxeViolations(page, testInfo);
   });
 
+  test("Level 5 game-data page", async ({ page }, testInfo) => {
+    await registerNewAccount(
+      page,
+      uniqueUsername("e2ea_l5game"),
+      "A11y Level 5 Game",
+    );
+    await page.goto("/account/games/level5");
+    await assertNoAxeViolations(page, testInfo);
+  });
+
   test("challenges list", async ({ page }, testInfo) => {
     await registerNewAccount(
       page,

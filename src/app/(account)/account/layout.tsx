@@ -5,11 +5,13 @@ import { Container, Stack } from "@mui/material";
 // and transport.ts's cache: "no-store" on every Backend V2 call.
 export const dynamic = "force-dynamic";
 
+// Challenges is Level 5-specific correspondence data, not a shared Sweat This account feature
+// (issue #25) - it is reachable from the dashboard's Games section (/account/games/level5)
+// rather than this platform-level nav. Its URL is unchanged; only its nav placement moved.
 const SUB_NAV_LINKS = [
   { href: "/account", label: "Account" },
   { href: "/account/profile", label: "Profile" },
   { href: "/account/friends", label: "Friends" },
-  { href: "/account/challenges", label: "Challenges" },
   { href: "/account/players", label: "Find Player" },
 ] as const;
 
