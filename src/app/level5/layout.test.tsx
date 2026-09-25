@@ -28,7 +28,7 @@ describe("Level5Layout", () => {
     expect(screen.queryByText(/^(Online|Offline)$/)).not.toBeInTheDocument();
   });
 
-  it("no longer provides a QueryClient - that moved to level5/page.tsx (issue #21)", () => {
+  it("no longer provides a QueryClient - that moved to level5/leaderboards/page.tsx (issue #23)", () => {
     expect(() =>
       render(
         <Level5Layout>
