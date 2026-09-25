@@ -89,6 +89,37 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
       await assertNoHorizontalOverflow(page);
     });
 
+    // Issue #25's dashboard: shared nav wrapping, the Identity section's Player Tag, and the
+    // dashboard's link cards must all stay usable at narrow widths, and the new Level 5
+    // game-data entry point must not introduce its own overflow.
+    test("account dashboard and the Level 5 game-data page stay usable with no horizontal overflow", async ({
+      page,
+    }) => {
+      const username = uniqueUsername(`e2er_${name.slice(0, 2)}dash`);
+      await registerNewAccount(page, username, "Responsive Dashboard Player");
+
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Account" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("navigation", { name: "Account" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "Identity" }).getByText(/^[A-Za-z0-9_]+#\d{4}$/),
+      ).toBeVisible();
+      await assertNoHorizontalOverflow(page);
+
+      await page
+        .getByRole("region", { name: "Games" })
+        .getByRole("link", { name: "Level 5" })
+        .click();
+      await expect(page).toHaveURL(/\/account\/games\/level5$/);
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Level 5" }),
+      ).toBeVisible();
+      await assertNoHorizontalOverflow(page);
+    });
+
     test("challenges: list and a challenge's detail stay usable", async ({
       page,
     }) => {
