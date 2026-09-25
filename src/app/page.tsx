@@ -55,9 +55,12 @@ export default function Page() {
               image={{
                 src: "/images/logo.png",
                 alt: "Level 5 logo",
-                width: 800,
-                height: 868,
-                priority: true,
+                // Sized to GameCard's ~220px display box (same 800:868 ratio as the source
+                // file), not the source's full intrinsic size - keeps the generated srcset from
+                // fetching a needlessly large variant for a small display.
+                width: 203,
+                height: 220,
+                preload: true,
               }}
               action={{ label: "Explore Level 5", href: "/level5" }}
             />

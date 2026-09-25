@@ -7,7 +7,7 @@ export interface GameCardImage {
   readonly alt: string;
   readonly width: number;
   readonly height: number;
-  readonly priority?: boolean;
+  readonly preload?: boolean;
 }
 
 export interface GameCardAction {
@@ -53,7 +53,8 @@ export default function GameCard({
           alt={image.alt}
           width={image.width}
           height={image.height}
-          priority={image.priority}
+          preload={image.preload}
+          sizes="220px"
           style={{
             height: "auto",
             width: "auto",
