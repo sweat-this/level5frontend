@@ -48,7 +48,7 @@ export function registerOpenTelemetry(): void {
  * Never the request/error objects themselves: no body, no headers, no stack trace or raw
  * exception message, no session/player/account identifiers, and never `request.path` (the
  * concrete URL, which can carry a dynamic segment's real value) - only `context.routePath`, the
- * route *template* (e.g. "/account/challenges/[seriesId]"). The active span's trace id (present
+ * route *template* (e.g. "/account/games/level5/challenges/[seriesId]"). The active span's trace id (present
  * whenever this fires during a traced request) is what a support reference in the UI pairs with.
  */
 export function recordUnhandledRequestError(

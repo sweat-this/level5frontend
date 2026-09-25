@@ -63,22 +63,25 @@ describe.each([
     name: "acceptChallengeAction",
     action: () => acceptChallengeAction,
     apiMock: () => acceptMock,
-    successRedirect: "/account/challenges?view=active&notice=accepted",
-    staleFirstPage: "/account/challenges?view=incoming",
+    successRedirect:
+      "/account/games/level5/challenges?view=active&notice=accepted",
+    staleFirstPage: "/account/games/level5/challenges?view=incoming",
   },
   {
     name: "declineChallengeAction",
     action: () => declineChallengeAction,
     apiMock: () => declineMock,
-    successRedirect: "/account/challenges?view=incoming&notice=declined",
-    staleFirstPage: "/account/challenges?view=incoming",
+    successRedirect:
+      "/account/games/level5/challenges?view=incoming&notice=declined",
+    staleFirstPage: "/account/games/level5/challenges?view=incoming",
   },
   {
     name: "cancelChallengeAction",
     action: () => cancelChallengeAction,
     apiMock: () => cancelMock,
-    successRedirect: "/account/challenges?view=outgoing&notice=cancelled",
-    staleFirstPage: "/account/challenges?view=outgoing",
+    successRedirect:
+      "/account/games/level5/challenges?view=outgoing&notice=cancelled",
+    staleFirstPage: "/account/games/level5/challenges?view=outgoing",
   },
 ])("$name", ({ action, apiMock, successRedirect, staleFirstPage }) => {
   it("rejects a mismatched Origin without calling Backend V2", async () => {
@@ -100,7 +103,7 @@ describe.each([
     });
 
     await expect(action()({ status: "idle" }, formData())).rejects.toThrow(
-      "REDIRECT:/account/login?returnTo=/account/challenges",
+      "REDIRECT:/account/login?returnTo=/account/games/level5/challenges",
     );
     expect(apiMock()).not.toHaveBeenCalled();
   });
@@ -148,7 +151,7 @@ describe.each([
     });
 
     await expect(action()({ status: "idle" }, formData())).rejects.toThrow(
-      "REDIRECT:/account/login?returnTo=/account/challenges",
+      "REDIRECT:/account/login?returnTo=/account/games/level5/challenges",
     );
   });
 

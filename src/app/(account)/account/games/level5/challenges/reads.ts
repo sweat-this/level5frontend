@@ -13,9 +13,8 @@ import type {
   TransportError,
   TransportResult,
 } from "@/lib/backend-v2/transport";
-import type { ChallengesView } from "./view";
+import { CHALLENGES_PATH, type ChallengesView } from "./view";
 
-export const CHALLENGES_PATH = "/account/challenges";
 export const CHALLENGES_LOGIN_REDIRECT = `/account/login?returnTo=${CHALLENGES_PATH}`;
 
 /**

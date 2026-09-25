@@ -27,7 +27,7 @@ describe("Versus", () => {
 
     expect(
       screen.getByRole("link", { name: "View Challenges" }),
-    ).toHaveAttribute("href", "/account/challenges");
+    ).toHaveAttribute("href", "/account/games/level5/challenges");
 
     for (const forbidden of [
       "Create Challenge",

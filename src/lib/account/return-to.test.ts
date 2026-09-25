@@ -54,4 +54,26 @@ describe("sanitizeAccountReturnTo", () => {
       "/account/friends",
     );
   });
+
+  // Issue #26's namespaced Level 5 challenges routes are nested /account subpaths - no dedicated
+  // allow-list entry is needed, the existing /account-prefix rule already covers them.
+  describe("Level 5 challenges namespace (issue #26)", () => {
+    it("allows the canonical challenges list path", () => {
+      expect(sanitizeAccountReturnTo("/account/games/level5/challenges")).toBe(
+        "/account/games/level5/challenges",
+      );
+    });
+
+    it("keeps a safe local query string on the list path", () => {
+      expect(
+        sanitizeAccountReturnTo("/account/games/level5/challenges?view=active"),
+      ).toBe("/account/games/level5/challenges?view=active");
+    });
+
+    it("allows the canonical challenge detail path", () => {
+      expect(
+        sanitizeAccountReturnTo("/account/games/level5/challenges/series-1"),
+      ).toBe("/account/games/level5/challenges/series-1");
+    });
+  });
 });

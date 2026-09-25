@@ -7,8 +7,7 @@ import {
 import type { SeriesDetails } from "@/lib/backend-v2/contracts";
 import * as SeriesApi from "@/lib/backend-v2/resources/series";
 import type { TransportError } from "@/lib/backend-v2/transport";
-
-const CHALLENGES_PATH = "/account/challenges";
+import { challengeDetailPath } from "../view";
 
 export type SeriesDetailOutcome =
   | { readonly kind: "data"; readonly series: SeriesDetails }
@@ -16,7 +15,7 @@ export type SeriesDetailOutcome =
   | { readonly kind: "message"; readonly message: string };
 
 export function loginRedirectFor(seriesId: string): string {
-  const returnTo = `${CHALLENGES_PATH}/${encodeURIComponent(seriesId)}`;
+  const returnTo = challengeDetailPath(encodeURIComponent(seriesId));
   return `/account/login?returnTo=${encodeURIComponent(returnTo)}`;
 }
 

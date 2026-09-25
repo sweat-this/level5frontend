@@ -21,6 +21,8 @@ import {
   type ChallengesListResult,
 } from "./reads";
 import {
+  CHALLENGES_PATH,
+  challengeDetailPath,
   firstQueryValue,
   normalizeCursor,
   normalizeView,
@@ -33,8 +35,6 @@ export const metadata: Metadata = {
   description:
     "Your incoming and outgoing challenges, and active and completed series.",
 };
-
-const CHALLENGES_PATH = "/account/challenges";
 
 const VIEW_TABS: readonly {
   readonly view: ChallengesView;
@@ -170,7 +170,7 @@ function IncomingRow({ series }: { readonly series: SeriesSummary }) {
           color="error"
         />
         <Link
-          href={`/account/challenges/${series.id}`}
+          href={challengeDetailPath(series.id)}
           aria-label={`View details for challenge from ${series.challenger.tag}`}
         >
           View Details
@@ -200,7 +200,7 @@ function OutgoingRow({ series }: { readonly series: SeriesSummary }) {
           color="error"
         />
         <Link
-          href={`/account/challenges/${series.id}`}
+          href={challengeDetailPath(series.id)}
           aria-label={`View details for challenge to ${series.opponent.tag}`}
         >
           View Details
@@ -219,7 +219,7 @@ function ActiveRow({ series }: { readonly series: SeriesSummary }) {
         (Best of {series.totalGames}) · Created {formatDate(series.createdAt)}
       </Typography>
       <Link
-        href={`/account/challenges/${series.id}`}
+        href={challengeDetailPath(series.id)}
         aria-label={`View details for active series between ${series.challenger.tag} and ${series.opponent.tag}`}
       >
         View Details
@@ -237,7 +237,7 @@ function CompletedRow({ series }: { readonly series: SeriesSummary }) {
         {formatDate(series.createdAt)}
       </Typography>
       <Link
-        href={`/account/challenges/${series.id}`}
+        href={challengeDetailPath(series.id)}
         aria-label={`View details for completed series between ${series.challenger.tag} and ${series.opponent.tag}`}
       >
         View Details
@@ -255,7 +255,7 @@ function HistoryRow({ series }: { readonly series: SeriesSummary }) {
         {formatDate(series.createdAt)}
       </Typography>
       <Link
-        href={`/account/challenges/${series.id}`}
+        href={challengeDetailPath(series.id)}
         aria-label={`View details for ${series.status.toLowerCase()} series between ${series.challenger.tag} and ${series.opponent.tag}`}
       >
         View Details

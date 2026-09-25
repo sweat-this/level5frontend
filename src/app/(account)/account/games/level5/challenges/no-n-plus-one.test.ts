@@ -32,7 +32,7 @@ const DETAIL_MODULE_FILES = [
 ];
 
 describe("challenges portal - no N+1 player/series hydration", () => {
-  it("never imports the Players resource client anywhere under account/challenges", () => {
+  it("never imports the Players resource client anywhere under games/level5/challenges", () => {
     for (const file of [...LIST_MODULE_FILES, ...DETAIL_MODULE_FILES]) {
       const source = readSource(file);
       expect(source, `${file} must not import PlayersApi`).not.toMatch(

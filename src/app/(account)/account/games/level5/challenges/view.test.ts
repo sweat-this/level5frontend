@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  challengeDetailPath,
   challengesPathFor,
   firstQueryValue,
   normalizeCursor,
@@ -68,7 +69,26 @@ describe("normalizeCursor", () => {
 });
 
 describe("challengesPathFor", () => {
+  it.each(["incoming", "outgoing", "active", "completed", "history"] as const)(
+    "namespaces %s under the Level 5 game-data route",
+    (view) => {
+      expect(challengesPathFor(view)).toBe(
+        `/account/games/level5/challenges?view=${view}`,
+      );
+    },
+  );
+
   it("never carries a cursor forward across a view change", () => {
-    expect(challengesPathFor("active")).toBe("/account/challenges?view=active");
+    expect(challengesPathFor("active")).toBe(
+      "/account/games/level5/challenges?view=active",
+    );
+  });
+});
+
+describe("challengeDetailPath", () => {
+  it("namespaces a series id under the Level 5 game-data route", () => {
+    expect(challengeDetailPath("series-1")).toBe(
+      "/account/games/level5/challenges/series-1",
+    );
   });
 });

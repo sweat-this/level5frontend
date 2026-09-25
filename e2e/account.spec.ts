@@ -110,8 +110,7 @@ test.describe("account dashboard (issue #25)", () => {
         .getByRole("link", { name: "Challenges" }),
     ).toHaveCount(0);
 
-    // The Games entry point links to the existing, unmigrated /account/challenges URL - issue
-    // #26 owns moving it under /account/games/level5/challenges.
+    // The Games entry point links to the namespaced Level 5 challenges route (issue #26).
     await level5Link.click();
     await expect(page).toHaveURL(/\/account\/games\/level5$/);
     await expect(
@@ -121,7 +120,7 @@ test.describe("account dashboard (issue #25)", () => {
     const challengesLink = page.getByRole("link", { name: "Challenges" });
     await expect(challengesLink).toBeVisible();
     await challengesLink.click();
-    await expect(page).toHaveURL(/\/account\/challenges$/);
+    await expect(page).toHaveURL(/\/account\/games\/level5\/challenges$/);
   });
 
   test("an unauthenticated visit to the Level 5 game-data page redirects to login with returnTo", async ({
