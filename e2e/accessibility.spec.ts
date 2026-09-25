@@ -105,7 +105,7 @@ test.describe("accessibility - critical flows", () => {
       uniqueUsername("e2ea_chal"),
       "A11y Challenges",
     );
-    await page.goto("/account/challenges");
+    await page.goto("/account/games/level5/challenges");
     await assertNoAxeViolations(page, testInfo);
   });
 
@@ -122,7 +122,7 @@ test.describe("accessibility - critical flows", () => {
     const series = await seedChallenge(challengerBackend, opponentBackend);
     await acceptDirect(opponentBackend, series.id);
 
-    await page.goto(`/account/challenges/${series.id}`);
+    await page.goto(`/account/games/level5/challenges/${series.id}`);
     await assertNoAxeViolations(page, testInfo);
   });
 });

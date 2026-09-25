@@ -35,8 +35,9 @@ function UnavailablePage({ message }: { readonly message: string }) {
  * Level 5's game-data entry point (issue #25) - the parent account layout sets `dynamic =
  * "force-dynamic"` but is not itself an auth guard (it only renders shared nav/chrome), so this
  * page resolves the account session directly, the same as every other authenticated account
- * page. Deliberately does not fetch challenge lists (that stays owned by /account/challenges,
- * migrating to a namespaced URL under this page in issue #26) - this page only links to it.
+ * page. Deliberately does not fetch challenge lists (that stays owned by
+ * /account/games/level5/challenges, namespaced under this page by issue #26) - this page only
+ * links to it.
  */
 export default async function Level5GameDataPage() {
   const sessionResult = await resolveCurrentAccountSession();
@@ -72,7 +73,7 @@ export default async function Level5GameDataPage() {
         }}
       >
         <Typography id="challenges-heading" variant="h6" component="h2">
-          <Link href="/account/challenges">Challenges</Link>
+          <Link href="/account/games/level5/challenges">Challenges</Link>
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Manage incoming, outgoing, active, and completed correspondence

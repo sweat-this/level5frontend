@@ -135,10 +135,10 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
       const series = await seedChallenge(challengerBackend, opponentBackend);
       await acceptDirect(opponentBackend, series.id);
 
-      await page.goto("/account/challenges");
+      await page.goto("/account/games/level5/challenges");
       await assertNoHorizontalOverflow(page);
 
-      await page.goto(`/account/challenges/${series.id}`);
+      await page.goto(`/account/games/level5/challenges/${series.id}`);
       await assertNoHorizontalOverflow(page);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     });

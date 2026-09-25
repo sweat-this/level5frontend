@@ -16,9 +16,12 @@ import * as SeriesApi from "@/lib/backend-v2/resources/series";
 import type { TransportError } from "@/lib/backend-v2/transport";
 import { getAccountRuntimeConfig } from "@/lib/web-auth/config";
 import { isAllowedOrigin } from "@/lib/web-auth/origin-policy";
-import { challengesPathFor, type ChallengesView } from "./view";
+import {
+  CHALLENGES_PATH,
+  challengesPathFor,
+  type ChallengesView,
+} from "./view";
 
-const CHALLENGES_PATH = "/account/challenges";
 const LOGIN_REDIRECT = `/account/login?returnTo=${CHALLENGES_PATH}`;
 
 type AccessOutcome =

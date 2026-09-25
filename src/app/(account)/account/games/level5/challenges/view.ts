@@ -1,12 +1,19 @@
 /**
- * View/cursor normalization for /account/challenges (issue #9). Every helper degrades to a safe
- * default rather than letting malformed input throw during server rendering.
+ * View/cursor normalization for /account/games/level5/challenges (issue #9, namespaced under
+ * Level 5's game data by issue #26). Every helper degrades to a safe default rather than letting
+ * malformed input throw during server rendering.
  */
 
 import { firstQueryValue, type RawQueryValue } from "@/lib/search-params";
 
 export type { RawQueryValue };
 export { firstQueryValue };
+
+/**
+ * The one canonical base path for the Level 5 challenges portal (issue #26) - every other module
+ * under this feature imports it from here rather than repeating the string literal.
+ */
+export const CHALLENGES_PATH = "/account/games/level5/challenges";
 
 export type ChallengesView =
   "incoming" | "outgoing" | "active" | "completed" | "history";
@@ -41,5 +48,10 @@ export function normalizeCursor(raw: RawQueryValue): string | undefined {
 
 /** The current category's first-page URL - never carries a cursor forward across a view change. */
 export function challengesPathFor(view: ChallengesView): string {
-  return `/account/challenges?view=${view}`;
+  return `${CHALLENGES_PATH}?view=${view}`;
+}
+
+/** A single series' canonical detail URL. */
+export function challengeDetailPath(seriesId: string): string {
+  return `${CHALLENGES_PATH}/${seriesId}`;
 }

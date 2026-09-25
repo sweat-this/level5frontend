@@ -55,11 +55,13 @@ async function registerParticipant(
 }
 
 test.describe("challenges portal", () => {
-  test("an unauthenticated visit to /account/challenges redirects to login", async ({
+  test("an unauthenticated visit to /account/games/level5/challenges redirects to login", async ({
     page,
   }) => {
-    await page.goto("/account/challenges");
-    await expect(page).toHaveURL(/\/account\/login\?returnTo=\/account\/challenges/);
+    await page.goto("/account/games/level5/challenges");
+    await expect(page).toHaveURL(
+      /\/account\/login\?returnTo=\/account\/games\/level5\/challenges/,
+    );
   });
 
   test("pending challenge lifecycle: accept, both participants see the active series and its detail", async ({
@@ -71,7 +73,7 @@ test.describe("challenges portal", () => {
     const series = await seedChallenge(a.backend, b.backend, 3);
 
     await login(page, b.username);
-    await page.goto("/account/challenges");
+    await page.goto("/account/games/level5/challenges");
     await expect(page.getByText("Challenger E2E")).toBeVisible();
     await expect(page.getByText(a.tag, { exact: true })).toBeVisible();
 
@@ -79,30 +81,30 @@ test.describe("challenges portal", () => {
       .getByRole("button", { name: `Accept challenge from ${a.tag}` })
       .click();
     await expect(page).toHaveURL(
-      /\/account\/challenges\?view=active&notice=accepted/,
+      /\/account\/games\/level5\/challenges\?view=active&notice=accepted/,
     );
     await expect(page.getByText("Challenge accepted.")).toBeVisible();
 
-    await page.goto("/account/challenges?view=incoming");
+    await page.goto("/account/games/level5/challenges?view=incoming");
     await expect(page.getByText("No incoming challenges.")).toBeVisible();
-    await page.goto("/account/challenges?view=active");
+    await page.goto("/account/games/level5/challenges?view=active");
 
     await page
       .getByRole("link", { name: new RegExp(`View details for active series`) })
       .click();
-    await expect(page).toHaveURL(new RegExp(`/account/challenges/${series.id}`));
+    await expect(page).toHaveURL(new RegExp(`/account/games/level5/challenges/${series.id}`));
     await expect(page.getByRole("heading", { name: "Participants" })).toBeVisible();
     await expect(page.getByText("Challenger E2E")).toBeVisible();
     await expect(page.getByText("Opponent E2E")).toBeVisible();
     await logout(page);
 
     await login(page, a.username);
-    await page.goto("/account/challenges?view=active");
+    await page.goto("/account/games/level5/challenges?view=active");
     await expect(page.getByText("Opponent E2E")).toBeVisible();
-    await page.goto("/account/challenges?view=outgoing");
+    await page.goto("/account/games/level5/challenges?view=outgoing");
     await expect(page.getByText("No outgoing challenges.")).toBeVisible();
 
-    await page.goto(`/account/challenges/${series.id}`);
+    await page.goto(`/account/games/level5/challenges/${series.id}`);
     await expect(page.getByRole("heading", { name: "Participants" })).toBeVisible();
   });
 
@@ -115,19 +117,19 @@ test.describe("challenges portal", () => {
     await seedChallenge(a.backend, b.backend, 3);
 
     await login(page, b.username);
-    await page.goto("/account/challenges");
+    await page.goto("/account/games/level5/challenges");
     await page
       .getByRole("button", { name: `Decline challenge from ${a.tag}` })
       .click();
     await expect(page).toHaveURL(
-      /\/account\/challenges\?view=incoming&notice=declined/,
+      /\/account\/games\/level5\/challenges\?view=incoming&notice=declined/,
     );
     await expect(page.getByText("Challenge declined.")).toBeVisible();
     await expect(page.getByText("No incoming challenges.")).toBeVisible();
     await logout(page);
 
     await login(page, a.username);
-    await page.goto("/account/challenges?view=outgoing");
+    await page.goto("/account/games/level5/challenges?view=outgoing");
     await expect(page.getByText("No outgoing challenges.")).toBeVisible();
   });
 
@@ -140,19 +142,19 @@ test.describe("challenges portal", () => {
     await seedChallenge(a.backend, b.backend, 3);
 
     await login(page, a.username);
-    await page.goto("/account/challenges?view=outgoing");
+    await page.goto("/account/games/level5/challenges?view=outgoing");
     await page
       .getByRole("button", { name: `Cancel challenge to ${b.tag}` })
       .click();
     await expect(page).toHaveURL(
-      /\/account\/challenges\?view=outgoing&notice=cancelled/,
+      /\/account\/games\/level5\/challenges\?view=outgoing&notice=cancelled/,
     );
     await expect(page.getByText("Challenge cancelled.")).toBeVisible();
     await expect(page.getByText("No outgoing challenges.")).toBeVisible();
     await logout(page);
 
     await login(page, b.username);
-    await page.goto("/account/challenges");
+    await page.goto("/account/games/level5/challenges");
     await expect(page.getByText("No incoming challenges.")).toBeVisible();
   });
 
@@ -172,7 +174,7 @@ test.describe("challenges portal", () => {
     await completeAttempt(a.backend, series.id, 1, attempt.attemptId, 10);
 
     await login(page, b.username);
-    await page.goto(`/account/challenges/${series.id}`);
+    await page.goto(`/account/games/level5/challenges/${series.id}`);
     await expect(page.getByRole("heading", { name: "Games" })).toBeVisible();
     await expect(page.getByText("Result not available")).toBeVisible();
     // b's own result was never submitted - the raw per-metric score must never appear anywhere.
@@ -190,11 +192,65 @@ test.describe("challenges portal", () => {
     await seedCompletedSeries(series.id, a.backend, b.backend);
 
     await login(page, a.username);
-    await page.goto("/account/challenges?view=completed");
+    await page.goto("/account/games/level5/challenges?view=completed");
     await expect(page.getByText("Loser E2E")).toBeVisible();
 
-    await page.goto(`/account/challenges/${series.id}`);
+    await page.goto(`/account/games/level5/challenges/${series.id}`);
     await expect(page.getByText("Completed", { exact: true })).toBeVisible();
     await expect(page.getByText(/Winner E2E \(.+\)/).first()).toBeVisible();
+  });
+});
+
+// Issue #26's legacy route compatibility - old /account/challenges URLs still resolve, through a
+// framework-level redirect only (never a second copy of the portal), for bookmarks/old
+// links/browser history. No current application UI navigates through these on its own.
+test.describe("legacy /account/challenges compatibility redirects", () => {
+  test("an authenticated old-list URL (with query) redirects to the canonical namespaced URL", async ({
+    page,
+  }) => {
+    const a = await registerParticipant(page, "e2e_lgcy_a", "Legacy Sender");
+    const b = await registerParticipant(
+      page,
+      "e2e_lgcy_b",
+      "Legacy Recipient",
+    );
+    await seedChallenge(a.backend, b.backend, 3);
+
+    await login(page, b.username);
+    await page.goto("/account/challenges?view=incoming");
+
+    await expect(page).toHaveURL(
+      /\/account\/games\/level5\/challenges\?view=incoming/,
+    );
+    await expect(page.getByText("Legacy Sender")).toBeVisible();
+  });
+
+  test("an authenticated old-detail URL redirects to the canonical namespaced detail route", async ({
+    page,
+  }) => {
+    const a = await registerParticipant(page, "e2e_lgcy_c", "Legacy Chal");
+    const b = await registerParticipant(page, "e2e_lgcy_d", "Legacy Opp");
+    const series = await seedChallenge(a.backend, b.backend, 3);
+    await acceptDirect(b.backend, series.id);
+
+    await login(page, a.username);
+    await page.goto(`/account/challenges/${series.id}`);
+
+    await expect(page).toHaveURL(
+      new RegExp(`/account/games/level5/challenges/${series.id}`),
+    );
+    await expect(
+      page.getByRole("heading", { name: "Participants" }),
+    ).toBeVisible();
+  });
+
+  test("an unauthenticated visit to the legacy list URL redirects, then requires login with the canonical returnTo", async ({
+    page,
+  }) => {
+    await page.goto("/account/challenges");
+
+    await expect(page).toHaveURL(
+      /\/account\/login\?returnTo=\/account\/games\/level5\/challenges/,
+    );
   });
 });

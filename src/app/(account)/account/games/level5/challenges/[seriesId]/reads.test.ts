@@ -22,7 +22,7 @@ afterEach(() => {
 describe("loginRedirectFor", () => {
   it("preserves the series id as an encoded returnTo", () => {
     expect(loginRedirectFor("series-1")).toBe(
-      "/account/login?returnTo=%2Faccount%2Fchallenges%2Fseries-1",
+      "/account/login?returnTo=%2Faccount%2Fgames%2Flevel5%2Fchallenges%2Fseries-1",
     );
   });
 });

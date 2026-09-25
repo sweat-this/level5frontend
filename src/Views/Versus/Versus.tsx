@@ -66,7 +66,7 @@ export default function Versus() {
       </Box>
 
       <Box component="section" sx={{ textAlign: { xs: "center", md: "left" } }}>
-        <ButtonLink href="/account/challenges" variant="contained">
+        <ButtonLink href="/account/games/level5/challenges" variant="contained">
           View Challenges
         </ButtonLink>
       </Box>

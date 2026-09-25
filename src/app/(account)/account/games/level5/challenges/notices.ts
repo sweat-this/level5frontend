@@ -1,5 +1,5 @@
 /**
- * Fixed allow-list of ?notice= codes /account/challenges renders after a mutation redirect (issue
+ * Fixed allow-list of ?notice= codes /account/games/level5/challenges renders after a mutation redirect (issue
  * #9's "Fixed Notice Codes") - mirrors friends/notices.ts's convention. An arbitrary query-string
  * value is never rendered directly; only one of these exact codes maps to copy.
  */
