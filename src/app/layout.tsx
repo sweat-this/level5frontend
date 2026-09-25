@@ -12,29 +12,29 @@ const roboto = Roboto({
 });
 
 const title = "Sweat This";
-const description =
-  "Sweat This - Level 5 high scores, characters, and game info.";
+const description = "Sweat This is home to Level 5 and Secret Robot.";
 
 export const metadata: Metadata = {
   // No real deployed domain exists yet (see .env.production's blank API base URL); falls back to
-  // localhost so OG/Twitter image URLs still resolve correctly for local dev/CI.
+  // localhost so metadata URLs still resolve correctly for local dev/CI.
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ),
   title,
   description,
   icons: { icon: "/images/logo.png" },
+  // No approved Sweat This-level social preview image exists yet (issue #22) - the Level 5 logo
+  // is game-specific, so omitting openGraph/twitter images here is preferable to a default social
+  // image that misrepresents the multi-game platform. Individual game routes may add their own.
   openGraph: {
     type: "website",
     title,
     description,
-    images: ["/images/logo.png"],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title,
     description,
-    images: ["/images/logo.png"],
   },
 };
 
