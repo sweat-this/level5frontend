@@ -10,8 +10,9 @@
  * framework-generated hydration <script> tags only works when the route is genuinely rendered
  * per-request - a *statically* rendered page has no per-request value to embed at all, so a
  * nonce can never be correct there regardless of what any Server Component does. Static public
- * routes (`/`, `/level5`, `/level5/characters`, `/level5/drblood`) therefore get `'unsafe-inline'`
- * on script-src instead (a narrower, documented exception - see CspOptions.allowInlineScript)
+ * routes (`/`, `/level5`, `/level5/modes`, `/level5/characters`, `/level5/versus`,
+ * `/level5/leaderboards`, `/level5/drblood` - see proxy.ts's STATIC_PUBLIC_ROUTES) therefore get
+ * `'unsafe-inline'` on script-src instead (a narrower, documented exception - see CspOptions.allowInlineScript)
  * rather than being forced dynamic just to keep a nonce that can't work there anyway; forcing
  * them dynamic was tried first and found to also silently strip their Cache-Control down to the
  * same private/no-store treatment as account routes, which issue #10 explicitly calls out as the
@@ -37,7 +38,8 @@ export interface CspOptions {
    *  instead of nonce-based, since a nonce can never be correct on a statically rendered page. */
   readonly allowInlineScript?: boolean;
   /** Origin (scheme://host[:port], no path) of the legacy V1 public API - see ScoresTable's
-   *  useHighscores(). Only /level5/* routes call the legacy API. */
+   *  useHighscores(). Only /level5/leaderboards calls the legacy API (see proxy.ts's
+   *  LEGACY_API_ROUTES). */
   readonly legacyApiOrigin?: string;
   /** /level5/drblood only - react-youtube loads the IFrame API script and embeds a player iframe
    *  from youtube.com, and renders thumbnail images from img.youtube.com (see DrBlood.tsx). */

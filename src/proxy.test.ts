@@ -40,9 +40,9 @@ describe("proxy", () => {
     expect(first).not.toBe(second);
   });
 
-  it("adds the legacy API origin to connect-src on /level5", () => {
+  it("adds the legacy API origin to connect-src on /level5/leaderboards", () => {
     vi.stubEnv("NEXT_PUBLIC_LEGACY_API_BASE_URL", "http://localhost:5124");
-    const response = proxy(requestFor("/level5"));
+    const response = proxy(requestFor("/level5/leaderboards"));
     expect(response.headers.get("Content-Security-Policy")).toContain(
       "connect-src 'self' http://localhost:5124",
     );
@@ -60,8 +60,18 @@ describe("proxy", () => {
     );
   });
 
-  it("does not add the legacy API origin on account or root routes", () => {
-    for (const path of ["/", "/account/login", "/account/profile"]) {
+  it("does not add the legacy API origin outside /level5/leaderboards - issue #23 narrowed the boundary after leaderboard relocation", () => {
+    const nonLeaderboardRoutes = [
+      "/",
+      "/account/login",
+      "/account/profile",
+      "/level5",
+      "/level5/modes",
+      "/level5/characters",
+      "/level5/versus",
+      "/level5/drblood",
+    ];
+    for (const path of nonLeaderboardRoutes) {
       vi.stubEnv("NEXT_PUBLIC_LEGACY_API_BASE_URL", "http://localhost:5124");
       const response = proxy(requestFor(path));
       expect(response.headers.get("Content-Security-Policy")).not.toContain(

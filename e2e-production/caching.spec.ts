@@ -19,7 +19,15 @@ test.describe("account routes are never cacheable", () => {
 });
 
 test.describe("public routes retain cacheable behavior", () => {
-  for (const path of ["/", "/level5", "/level5/characters", "/level5/drblood"]) {
+  for (const path of [
+    "/",
+    "/level5",
+    "/level5/modes",
+    "/level5/characters",
+    "/level5/versus",
+    "/level5/leaderboards",
+    "/level5/drblood",
+  ]) {
     test(`${path} does not respond with an account-style private/no-store Cache-Control`, async ({
       page,
     }) => {

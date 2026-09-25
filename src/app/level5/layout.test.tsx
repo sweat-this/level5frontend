@@ -47,4 +47,56 @@ describe("Level5Layout", () => {
       ),
     ).not.toThrow();
   });
+
+  it("primary navigation includes Modes, Characters, and Versus (issue #23)", () => {
+    render(
+      <Level5Layout>
+        <div>content</div>
+      </Level5Layout>,
+    );
+
+    expect(screen.getByRole("link", { name: "Modes" })).toHaveAttribute(
+      "href",
+      "/level5/modes",
+    );
+    expect(screen.getByRole("link", { name: "Characters" })).toHaveAttribute(
+      "href",
+      "/level5/characters",
+    );
+    expect(screen.getByRole("link", { name: "Versus" })).toHaveAttribute(
+      "href",
+      "/level5/versus",
+    );
+  });
+
+  it("primary navigation does not include Scores, Leaderboards, or Dr Blood (issue #23)", () => {
+    render(
+      <Level5Layout>
+        <div>content</div>
+      </Level5Layout>,
+    );
+
+    expect(
+      screen.queryByRole("link", { name: "Scores" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Leaderboards" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Dr Blood" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("the Level 5 brand/home link still resolves to /level5", () => {
+    render(
+      <Level5Layout>
+        <div>content</div>
+      </Level5Layout>,
+    );
+
+    expect(screen.getByRole("link", { name: "Level 5" })).toHaveAttribute(
+      "href",
+      "/level5",
+    );
+  });
 });
