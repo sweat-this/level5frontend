@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 
 // Challenges is Level 5-specific correspondence data, not a shared Sweat This account feature
 // (issue #25) - it is reachable from the dashboard's Games section (/account/games/level5)
-// rather than this platform-level nav. Its URL is unchanged; only its nav placement moved.
+// rather than this platform-level nav. Its URL moved to /account/games/level5/challenges
+// (issue #26); the old /account/challenges paths redirect there (see next.config.ts).
 const SUB_NAV_LINKS = [
   { href: "/account", label: "Account" },
   { href: "/account/profile", label: "Profile" },
