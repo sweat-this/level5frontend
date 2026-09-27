@@ -1,6 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
-import { acceptDirect, loginDirect, seedChallenge } from "./test-support/backend-seed";
 import {
+  acceptDirect,
+  loginDirect,
+  seedChallenge,
+  seedFriendship,
+} from "./test-support/backend-seed";
+import {
+  login,
   logout,
   PASSWORD,
   registerNewAccount,
@@ -157,6 +163,30 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
       }
     });
 
+    // Issue #27: the redesigned homepage (#22) and Secret Robot public hub (#24) had no dedicated
+    // responsive coverage of their own, and Level 5 Characters (a public game-hub page with cards)
+    // had none at all. Global nav, hero content, cards, and footer must all stay usable with no
+    // horizontal overflow at every certified width.
+    test("homepage, Level 5 Characters, and the Secret Robot hub stay usable with no horizontal overflow", async ({
+      page,
+    }) => {
+      for (const path of [
+        "/",
+        "/level5/characters",
+        "/secret-robot",
+        "/secret-robot/world",
+        "/secret-robot/characters",
+      ]) {
+        await page.goto(path);
+        // PlatformHeader's "Primary" nav landmark is display:none below the md breakpoint (the
+        // mobile Drawer trigger takes over instead - see mobile-navigation.spec.ts for that
+        // certification) - "banner" is what's actually present at every width.
+        await expect(page.getByRole("banner")).toBeVisible();
+        await expect(page.getByRole("contentinfo")).toBeVisible();
+        await assertNoHorizontalOverflow(page);
+      }
+    });
+
     test("Level 5 local navigation is keyboard-reachable with a visible focus indicator", async ({
       page,
     }) => {
@@ -193,3 +223,53 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
     });
   });
 }
+
+// Issue #27: the responsive friend tests above use short names throughout - this is the one
+// targeted mobile scenario with a near-maximum valid Display Name (32 chars, the field's real
+// maxLength - see RegisterForm.tsx), checking the friend-list row and the incoming-request row
+// specifically, since neither wraps/truncates today and both sit in an unconstrained flex row
+// (see friends/page.tsx's FriendsList/IncomingRequestsList).
+test.describe("responsive - mobile (390x844) - long Display Name edge case", () => {
+  test.use({ viewport: VIEWPORTS.mobile });
+
+  test("friend list and incoming-request rows stay usable with a near-maximum Display Name", async ({
+    page,
+  }) => {
+    const LONG_NAME = "Extremely Long Display Name Test".slice(0, 32);
+
+    // A: the viewer whose /account/friends page gets checked.
+    const aUsername = uniqueUsername("e2er_long_a");
+    await registerNewAccount(page, aUsername, "Long Name Viewer");
+    const aBackend = await loginDirect(aUsername, PASSWORD);
+    await page.goto("/account/profile");
+    const tagA = (
+      await page.getByText(/^[A-Za-z0-9_]+#\d{4}$/).textContent()
+    )?.trim();
+    expect(tagA).toBeTruthy();
+    await logout(page);
+
+    // B: already an established friend of A, with the long name - checks the friend-list row.
+    const bUsername = uniqueUsername("e2er_long_b");
+    await registerNewAccount(page, bUsername, LONG_NAME);
+    const bBackend = await loginDirect(bUsername, PASSWORD);
+    await seedFriendship(aBackend, bBackend);
+    await logout(page);
+
+    // C: sends A a fresh request with the long name - checks the incoming-request row.
+    const cUsername = uniqueUsername("e2er_long_c");
+    await registerNewAccount(page, cUsername, LONG_NAME);
+    await page.goto("/account/players");
+    await page.getByLabel("Player Tag").fill(tagA!);
+    await page.getByRole("button", { name: "Search" }).click();
+    await page.getByRole("button", { name: /Send friend request/ }).click();
+    await logout(page);
+
+    await login(page, aUsername);
+    await page.goto("/account/friends");
+    await expect(page.getByText(LONG_NAME).first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^Accept friend request from/ }),
+    ).toBeVisible();
+    await assertNoHorizontalOverflow(page);
+  });
+});

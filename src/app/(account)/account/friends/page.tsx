@@ -99,9 +99,15 @@ function FriendsList({
         <Stack
           key={friend.playerId}
           component="li"
-          direction="row"
-          spacing={2}
-          sx={{ alignItems: "center", justifyContent: "space-between" }}
+          // column at xs (issue #27): a near-maximum-length Display Name (32 chars) plus the
+          // Remove button in one unwrapping row overflowed the viewport at 390px - row still
+          // fits comfortably from sm up.
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 1, sm: 2 }}
+          sx={{
+            alignItems: { xs: "flex-start", sm: "center" },
+            justifyContent: "space-between",
+          }}
         >
           <Stack spacing={0.5}>
             <Typography sx={{ fontWeight: "bold" }}>
@@ -150,9 +156,13 @@ function IncomingRequestsList({
         <Stack
           key={item.id}
           component="li"
-          direction="row"
-          spacing={2}
-          sx={{ alignItems: "center", justifyContent: "space-between" }}
+          // column at xs (issue #27) - same overflow issue and fix as FriendsList's row above.
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 1, sm: 2 }}
+          sx={{
+            alignItems: { xs: "flex-start", sm: "center" },
+            justifyContent: "space-between",
+          }}
         >
           <Typography>
             {item.otherPlayer.displayName}{" "}
@@ -206,9 +216,13 @@ function OutgoingRequestsList({
         <Stack
           key={item.id}
           component="li"
-          direction="row"
-          spacing={2}
-          sx={{ alignItems: "center", justifyContent: "space-between" }}
+          // column at xs (issue #27) - same overflow issue and fix as FriendsList's row above.
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 1, sm: 2 }}
+          sx={{
+            alignItems: { xs: "flex-start", sm: "center" },
+            justifyContent: "space-between",
+          }}
         >
           <Typography>
             {item.otherPlayer.displayName}{" "}

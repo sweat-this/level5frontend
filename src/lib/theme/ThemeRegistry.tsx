@@ -20,6 +20,10 @@ const roboto = Roboto({
 
 const theme = createTheme({
   typography: { fontFamily: roboto.style.fontFamily },
+  // "system" (issue #27): honors the browser/OS prefers-reduced-motion setting for every
+  // MUI-managed transition (theme.transitions.create(), component defaults) with no
+  // application-specific motion-preference store to build or maintain.
+  motion: { reducedMotion: "system" },
 });
 
 export default function ThemeRegistry({
