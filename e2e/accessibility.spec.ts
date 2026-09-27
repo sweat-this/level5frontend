@@ -33,10 +33,11 @@ async function assertNoAxeViolations(
   testInfo: TestInfo,
 ): Promise<void> {
   const results = await new AxeBuilder({ page })
-    // WCAG 2.0/2.1 A/AA only - axe's default ruleset (no tag filter) also runs its own
-    // "best-practice" rules (e.g. page-has-heading-one), which are stricter/more opinionated
-    // than an actual WCAG success criterion and outside what this certification is scoped to.
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    // WCAG 2.0/2.1/2.2 A/AA only (issue #27 adds wcag22aa) - axe's default ruleset (no tag
+    // filter) also runs its own "best-practice" rules (e.g. page-has-heading-one), which are
+    // stricter/more opinionated than an actual WCAG success criterion and outside what this
+    // certification is scoped to.
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
 
   if (results.violations.length > 0) {
@@ -127,9 +128,25 @@ test.describe("accessibility - critical flows", () => {
   });
 });
 
+test.describe("accessibility - Sweat This homepage (issue #22)", () => {
+  // No account/backend seeding needed - static, unauthenticated public page.
+  test("/", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await assertNoAxeViolations(page, testInfo);
+  });
+});
+
 test.describe("accessibility - Level 5 public hub (issue #23)", () => {
   // No account/backend seeding needed - these are static, unauthenticated public pages.
-  for (const path of ["/level5", "/level5/modes", "/level5/versus"]) {
+  for (const path of [
+    "/level5",
+    "/level5/modes",
+    "/level5/versus",
+    // Part of the current public game hub (issue #27) - also exercises CharacterCard, whose
+    // legacy CardActionArea wrapper previously exposed keyboard-focusable button semantics for
+    // an activation that does nothing (see CharacterCard.tsx and its own regression test).
+    "/level5/characters",
+  ]) {
     test(`${path}`, async ({ page }, testInfo) => {
       await page.goto(path);
       await assertNoAxeViolations(page, testInfo);
@@ -159,8 +176,14 @@ test.describe("keyboard and focus management", () => {
   }) => {
     await page.goto("/account/login");
 
-    // Starting focus is on <body> (nothing pre-focused) - the first Tab must reach Username
-    // first, not skip into the middle of the form or land somewhere unexpected.
+    // Starting focus is on <body> (nothing pre-focused). The first Tab reaches the skip link
+    // (issue #27) - PlatformHeader's global nav otherwise sits between <body> and the page's own
+    // content in Tab order on every page. Activating it jumps straight past the header to
+    // <main>, whose next Tab reaches Username first, not somewhere in the middle of the form.
+    await page.keyboard.press("Tab");
+    const skipLink = page.getByRole("link", { name: "Skip to main content" });
+    await expect(skipLink).toBeFocused();
+    await page.keyboard.press("Enter");
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Username")).toBeFocused();
 
@@ -236,5 +259,140 @@ test.describe("keyboard and focus management", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).not.toBeVisible();
     await expect(removeButton).toBeFocused();
+  });
+});
+
+/**
+ * Tabs forward from wherever focus currently sits until `target` is reached, or fails. Real
+ * keyboard-driven focus, not a programmatic .focus() call - Chromium's :focus-visible heuristic
+ * doesn't reliably fire for the latter (see e2e/responsive.spec.ts's Level 5 local-nav test, which
+ * established this same pattern first).
+ */
+async function tabToElement(
+  page: Page,
+  target: ReturnType<Page["getByRole"]>,
+  maxTabStops = 40,
+): Promise<void> {
+  for (let i = 0; i < maxTabStops; i += 1) {
+    if (await target.evaluate((el) => el === document.activeElement)) {
+      return;
+    }
+    await page.keyboard.press("Tab");
+  }
+  await expect(target).toBeFocused();
+}
+
+async function assertVisibleFocusOutline(
+  target: ReturnType<Page["getByRole"]>,
+): Promise<void> {
+  const outlineStyle = await target.evaluate(
+    (el) => getComputedStyle(el).outlineStyle,
+  );
+  expect(outlineStyle).not.toBe("none");
+}
+
+test.describe("focus visibility across representative controls (issue #27)", () => {
+  // Game-local navigation already has its own dedicated real-Tab-walk certification
+  // (e2e/responsive.spec.ts's "Level 5 local navigation is keyboard-reachable" test) - not
+  // duplicated here.
+
+  test("platform global navigation", async ({ page }) => {
+    await page.goto("/");
+    const link = page
+      .getByRole("navigation", { name: "Primary" })
+      .getByRole("link", { name: "Level 5" });
+    await tabToElement(page, link);
+    await expect(link).toBeFocused();
+    await assertVisibleFocusOutline(link);
+  });
+
+  test("mobile menu trigger", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    const trigger = page.getByRole("button", { name: "Open navigation menu" });
+    await tabToElement(page, trigger);
+    await expect(trigger).toBeFocused();
+    await assertVisibleFocusOutline(trigger);
+  });
+
+  test("account navigation", async ({ page }) => {
+    await registerNewAccount(page, uniqueUsername("e2ea_fv_acct"), "Focus Nav");
+    const link = page
+      .getByRole("navigation", { name: "Account" })
+      .getByRole("link", { name: "Profile" });
+    await tabToElement(page, link);
+    await expect(link).toBeFocused();
+    await assertVisibleFocusOutline(link);
+  });
+
+  test("challenge category navigation", async ({ page }) => {
+    await registerNewAccount(
+      page,
+      uniqueUsername("e2ea_fv_chal"),
+      "Focus Challenges",
+    );
+    await page.goto("/account/games/level5/challenges");
+    const link = page
+      .getByRole("navigation", { name: "Challenge category" })
+      .getByRole("link", { name: "Completed" });
+    await tabToElement(page, link);
+    await expect(link).toBeFocused();
+    await assertVisibleFocusOutline(link);
+  });
+});
+
+test.describe("pointer targets at mobile width (issue #27)", () => {
+  // WCAG 2.2's target-size rule evaluates each control's actual rendered box - a scan at desktop
+  // width would miss a control that only gets tightly packed/shrunk at narrow widths. Game-local
+  // navigation already has dedicated desktop-viewport axe coverage (the Level 5 public hub
+  // block above); account navigation and challenge category navigation don't, and both wrap at
+  // mobile width (see account/layout.tsx and challenges/page.tsx's CategoryNav) - exactly the
+  // layout change most likely to introduce a target-size/spacing regression.
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("account navigation", async ({ page }, testInfo) => {
+    await registerNewAccount(
+      page,
+      uniqueUsername("e2ea_pt_acct"),
+      "Pointer Target Nav",
+    );
+    await assertNoAxeViolations(page, testInfo);
+  });
+
+  test("challenge category navigation", async ({ page }, testInfo) => {
+    await registerNewAccount(
+      page,
+      uniqueUsername("e2ea_pt_chal"),
+      "Pointer Target Challenges",
+    );
+    await page.goto("/account/games/level5/challenges");
+    await assertNoAxeViolations(page, testInfo);
+  });
+});
+
+test.describe("authentication form paste behavior (issue #27)", () => {
+  // Proves actual browser paste (via the clipboard, like a real password manager would perform),
+  // not just an absence-of-onPaste-handler check - the two aren't equivalent: a stray
+  // preventDefault() anywhere in a parent handler, or an input mode/pattern that silently rejects
+  // pasted characters, would pass the latter while still breaking real paste.
+  test("a password can be pasted into the login form", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto("/account/login");
+
+    const pastedPassword = "Pasted!Str0ngPassw0rd#456";
+    await page.evaluate(
+      (text) => navigator.clipboard.writeText(text),
+      pastedPassword,
+    );
+
+    const passwordField = page.getByLabel("Password");
+    await passwordField.click();
+    const isMac = process.platform === "darwin";
+    await page.keyboard.press(isMac ? "Meta+V" : "Control+V");
+
+    await expect(passwordField).toHaveValue(pastedPassword);
   });
 });

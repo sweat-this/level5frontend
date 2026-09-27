@@ -4,6 +4,7 @@ import { Grid } from "@mui/material";
 import ThemeRegistry from "@/lib/theme/ThemeRegistry";
 import PlatformHeader from "@/Components/platform/PlatformHeader";
 import PlatformFooter from "@/Components/platform/PlatformFooter";
+import SkipLink from "@/Components/platform/SkipLink";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
@@ -45,11 +46,22 @@ export default function RootLayout({
     <html lang="en" className={roboto.className}>
       <body>
         <ThemeRegistry>
+          <SkipLink />
           <PlatformHeader />
           <Grid id="mainContainer">
             {/* The one semantic <main> landmark for every page (issue #10) - none of the
-            nested layouts (account/level5/auth) render their own <main>, so this is safe app-wide. */}
-            <Grid id="scrollableContent" component="main">
+            nested layouts (account/level5/auth) render their own <main>, so this is safe app-wide.
+            tabIndex={-1} (issue #27) makes this SkipLink's jump target focusable, not just a
+            same-page scroll target - the browser moves real keyboard focus here on activation, so
+            the next Tab reaches the page's own first control instead of the header nav again. No
+            extra wrapper element: existing pages render Grid items as direct children here, and
+            adding one would break their flex/grid layout. */}
+            <Grid
+              id="scrollableContent"
+              component="main"
+              tabIndex={-1}
+              sx={{ "&:focus-visible": { outline: "none" } }}
+            >
               {children}
             </Grid>
           </Grid>

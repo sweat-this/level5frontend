@@ -101,7 +101,10 @@ function CategoryNav({ current }: { readonly current: ChallengesView }) {
       component="nav"
       aria-label="Challenge category"
       direction="row"
-      spacing={3}
+      // flexWrap (issue #27): five categories in one unwrapping row overflowed the viewport at
+      // 390px. rowGap/columnGap (rather than `spacing`, which only ever produces a single-axis
+      // margin) keep sensible spacing once wrapping actually happens.
+      sx={{ flexWrap: "wrap", rowGap: 1, columnGap: 3 }}
     >
       {VIEW_TABS.map((tab) => (
         <Link
