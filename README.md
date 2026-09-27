@@ -32,6 +32,11 @@ Full detail: [`docs/architecture/web-authentication.md`](docs/architecture/web-a
 Production configuration, deployment, and operations:
 [`docs/operations/frontend-production.md`](docs/operations/frontend-production.md).
 
+`/level5/leaderboards` still serves from the legacy V1 backend, isolated behind a route-specific
+CSP allowance, pending a hosted V2 replacement - see
+[`docs/architecture/v1-legacy-retirement.md`](docs/architecture/v1-legacy-retirement.md) for the
+retirement gate status before touching that path or `src/lib/backend-v1-public/*`.
+
 ## Local development
 
 Requires Node 22+.
