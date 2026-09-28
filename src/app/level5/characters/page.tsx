@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@mui/material";
 import Characters from "@/Views/Characters/Characters";
 
 const title = "Sweat This - Characters";
@@ -12,5 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <Characters />;
+  return (
+    <Container maxWidth="lg" sx={{ paddingY: { xs: 4, md: 6 } }}>
+      <Characters />
+    </Container>
+  );
 }

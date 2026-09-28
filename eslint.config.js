@@ -19,6 +19,17 @@ export default defineConfig(
   react.configs.flat.recommended,
   jsxA11y.flatConfigs.recommended,
   {
+    // Unscoped (no `files`) so this applies to every linted file, not just src/**/*.{ts,tsx} -
+    // eslint-plugin-react's version warning is a one-time, module-level flag: a single linted
+    // file without this setting (e.g. root-level next.config.test.ts, which is lint-checked but
+    // isn't under src/) trips it for the whole run even though every src/ file has it below.
+    settings: {
+      // Explicit version, not 'detect': eslint-plugin-react's auto-detection calls a context
+      // API (getFilename) that ESLint 10 removed, crashing every lint run.
+      react: { version: '19.2.8' },
+    },
+  },
+  {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 'latest',
@@ -31,11 +42,6 @@ export default defineConfig(
     },
     plugins: {
       'react-hooks': reactHooks,
-    },
-    settings: {
-      // Explicit version, not 'detect': eslint-plugin-react's auto-detection calls a context
-      // API (getFilename) that ESLint 10 removed, crashing every lint run.
-      react: { version: '19.2.8' },
     },
     rules: {
       ...reactHooks.configs['recommended-latest'].rules,

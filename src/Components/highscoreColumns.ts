@@ -73,4 +73,16 @@ const highscoreColumns: GridColDef<Highscore>[] = [
   },
 ];
 
+// The columns that stay visible below the `sm` breakpoint (see ScoresTable.tsx's
+// columnVisibilityModel) - identity plus the primary scoring values a player actually cares
+// about at a glance. Everything else here is secondary/diagnostic (mode options, raw shot
+// counts, etc.) and stays available above `sm`, just not worth the horizontal scroll on a phone.
+export const MOBILE_VISIBLE_FIELDS: ReadonlyArray<keyof Highscore> = [
+  "username",
+  "character",
+  "modeName",
+  "totalPoints",
+  "level",
+];
+
 export default highscoreColumns;

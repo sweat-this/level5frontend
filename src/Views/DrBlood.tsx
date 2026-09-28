@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Grid } from "@mui/material";
+import { Box, Grid, Stack, Typography } from "@mui/material";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import YouTube from "react-youtube";
 
@@ -26,52 +26,57 @@ export default function DrBlood() {
   const [playing, setPlaying] = useState<Set<string>>(new Set());
 
   return (
-    <Grid container spacing={2}>
-      {videoIds.map((videoId, index) =>
-        playing.has(videoId) ? (
-          <Grid key={videoId}>
-            <YouTube
-              videoId={videoId}
-              opts={{
-                width: String(THUMBNAIL_WIDTH),
-                height: String(THUMBNAIL_HEIGHT),
-              }}
-            />
-          </Grid>
-        ) : (
-          <Grid key={videoId}>
-            <Box
-              component="button"
-              type="button"
-              onClick={() => setPlaying(new Set(playing).add(videoId))}
-              aria-label={`Play video ${index + 1} of ${videoIds.length}`}
-              sx={{
-                position: "relative",
-                width: THUMBNAIL_WIDTH,
-                maxWidth: "100%",
-                height: THUMBNAIL_HEIGHT,
-                padding: 0,
-                border: "none",
-                cursor: "pointer",
-                backgroundImage: `url(https://img.youtube.com/vi/${videoId}/hqdefault.jpg)`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            >
-              <PlayCircleIcon
-                sx={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  fontSize: "4em",
-                  color: "white",
+    <Stack spacing={{ xs: 3, md: 4 }}>
+      <Typography component="h1" variant="h3" sx={{ fontWeight: 700 }}>
+        Dr Blood
+      </Typography>
+      <Grid container spacing={2}>
+        {videoIds.map((videoId, index) =>
+          playing.has(videoId) ? (
+            <Grid key={videoId}>
+              <YouTube
+                videoId={videoId}
+                opts={{
+                  width: String(THUMBNAIL_WIDTH),
+                  height: String(THUMBNAIL_HEIGHT),
                 }}
               />
-            </Box>
-          </Grid>
-        ),
-      )}
-    </Grid>
+            </Grid>
+          ) : (
+            <Grid key={videoId}>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => setPlaying(new Set(playing).add(videoId))}
+                aria-label={`Play video ${index + 1} of ${videoIds.length}`}
+                sx={{
+                  position: "relative",
+                  width: THUMBNAIL_WIDTH,
+                  maxWidth: "100%",
+                  height: THUMBNAIL_HEIGHT,
+                  padding: 0,
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundImage: `url(https://img.youtube.com/vi/${videoId}/hqdefault.jpg)`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              >
+                <PlayCircleIcon
+                  sx={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    fontSize: "4em",
+                    color: "white",
+                  }}
+                />
+              </Box>
+            </Grid>
+          ),
+        )}
+      </Grid>
+    </Stack>
   );
 }

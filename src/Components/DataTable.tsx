@@ -6,11 +6,12 @@ import {
   DataGridProps,
   GridCallbackDetails,
   GridColDef,
+  GridColumnVisibilityModel,
   GridPaginationModel,
   GridValidRowModel,
   useGridApiRef,
 } from "@mui/x-data-grid";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { Summary } from "../lib/backend-v1-public/types";
 
 // Styled against plain MUI palette tokens (grey/divider/background.paper) that always exist,
@@ -50,6 +51,7 @@ export default function DataTable({
   loading,
   disableColumnFilter = false,
   disableColumnSorting = false,
+  columnVisibilityModel,
 }: Readonly<{
   columns: GridColDef[];
   data: Summary;
@@ -64,19 +66,19 @@ export default function DataTable({
   // silently does nothing.
   disableColumnFilter?: boolean;
   disableColumnSorting?: boolean;
+  // Controlled, not initialState: callers that need it to respond to a breakpoint change (see
+  // ScoresTable.tsx) need DataGrid to pick up the updated model on every render, not just once.
+  columnVisibilityModel?: GridColumnVisibilityModel;
 }>) {
   const { content } = data;
-  const [asyncContent, setAsyncContent] = useState<GridValidRowModel[]>([]);
+  const asyncContent = content as GridValidRowModel[];
   const apiRef = useGridApiRef();
 
-  // simulate async data. Bug fix for page render block
+  // Not mirroring `content` into state - `asyncContent` above is derived directly from it during
+  // render. This effect exists only to flip the *parent's* `loading` state off exactly when a new
+  // page of data arrives (see ScoresTable.tsx), which is a different component's state and so
+  // can't be set during this component's own render.
   useEffect(() => {
-    // pre-existing, deliberate: mirrors `content` into local state so the loading spinner (see
-    // ScoresTable.tsx) turns off exactly when a new page of data arrives, not before. Rewriting
-    // this to avoid the effect would change that timing, which is outside the scope of the
-    // react-hooks version bump that introduced this rule.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAsyncContent(content as GridValidRowModel[]);
     setLoading(false);
   }, [content, setLoading]);
 
@@ -106,6 +108,7 @@ export default function DataTable({
       sx={style}
       apiRef={apiRef}
       loading={loading}
+      columnVisibilityModel={columnVisibilityModel}
     />
   );
 }

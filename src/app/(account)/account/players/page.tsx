@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Alert, Button, Stack, TextField, Typography } from "@mui/material";
+import { resolveAuthenticatedBackendAccess } from "@/lib/account/backend-access";
 import { firstQueryValue, type RawQueryValue } from "@/lib/search-params";
-import { PLAYERS_PATH, resolvePlayerLookup } from "./lookup";
+import { loginRedirectFor, PLAYERS_PATH, resolvePlayerLookup } from "./lookup";
 import SendFriendRequestForm from "./SendFriendRequestForm";
 
 export const metadata: Metadata = {
@@ -20,6 +21,17 @@ export default async function PlayersLookupPage({
   // client-side adjustment made here, never uppercasing/parsing/partial matching. A repeated
   // `?tag=a&tag=b` deterministically resolves to the first occurrence.
   const tag = firstQueryValue(rawTag)?.trim();
+
+  // A bare visit (no ?tag=) never reaches resolvePlayerLookup below, which is the only place
+  // this page otherwise checks auth - without this, an unauthenticated visitor could load the
+  // search form itself (just not a result). Only the definitive unauthenticated case redirects
+  // here; unavailable/throttled still render the form, matching how a submitted search degrades.
+  if (!tag) {
+    const access = await resolveAuthenticatedBackendAccess();
+    if (access.kind === "unauthenticated") {
+      redirect(loginRedirectFor(undefined));
+    }
+  }
 
   return (
     <Stack spacing={4}>

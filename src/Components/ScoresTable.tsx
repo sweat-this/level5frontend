@@ -1,10 +1,21 @@
 "use client";
 
-import { Box, CircularProgress, Grid, Paper, Typography } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  Grid,
+  Paper,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import { useState } from "react";
-import { GridPaginationModel } from "@mui/x-data-grid";
+import {
+  GridColumnVisibilityModel,
+  GridPaginationModel,
+} from "@mui/x-data-grid";
 import DataTable from "./DataTable";
-import highscoreColumns from "./highscoreColumns";
+import highscoreColumns, { MOBILE_VISIBLE_FIELDS } from "./highscoreColumns";
 import useHighscores from "../lib/backend-v1-public/hooks/useHighscores";
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -14,6 +25,18 @@ export default function ScoresTable() {
   const [results, setResults] = useState(DEFAULT_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const { data, isError, isPending } = useHighscores(page, results);
+
+  // Below `sm`, all 19 highscore columns forced horizontal scrolling through a dense table -
+  // hide everything but identity + primary scoring, keeping the full set above `sm`.
+  const theme = useTheme();
+  const isNarrow = useMediaQuery(theme.breakpoints.down("sm"));
+  const mobileVisibleFields: readonly string[] = MOBILE_VISIBLE_FIELDS;
+  const columnVisibilityModel: GridColumnVisibilityModel = Object.fromEntries(
+    highscoreColumns.map((column) => [
+      column.field,
+      !isNarrow || mobileVisibleFields.includes(column.field),
+    ]),
+  );
 
   const handlePaginationChange = (model: GridPaginationModel) => {
     setPage(model.page);
@@ -50,6 +73,7 @@ export default function ScoresTable() {
         setLoading={setLoading}
         disableColumnFilter
         disableColumnSorting
+        columnVisibilityModel={columnVisibilityModel}
       />
     );
   }
