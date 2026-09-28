@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@mui/material";
 import DrBlood from "@/Views/DrBlood";
 
 const title = "Sweat This - Dr Blood";
@@ -12,5 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <DrBlood />;
+  return (
+    <Container maxWidth="lg" sx={{ paddingY: { xs: 4, md: 6 } }}>
+      <DrBlood />
+    </Container>
+  );
 }

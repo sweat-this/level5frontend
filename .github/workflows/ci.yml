@@ -80,6 +80,16 @@ jobs:
     # suites against it. Informational for now (continue-on-error below) - not yet a required
     # merge gate, since it's the newest and most cross-repo-dependent job here (see "Do not make
     # optional/manual diagnostics required merge gates until they are deterministic").
+    #
+    # Currently failing 100% of the time (checked the last 7 runs on dev), always at "Apply
+    # Backend V2 EF Core migrations", before any frontend/Playwright code runs: `dotnet ef` exits
+    # with "Run \"dotnet tool restore\" to make the \"dotnet-ef\" command available" - the global
+    # `dotnet-ef` install a few steps above doesn't take effect because the checked-out Backend V2
+    # repo has its own local tool manifest, which this workflow never restores. Not a frontend or
+    # Backend V2 product regression - a one-line CI fix (`dotnet tool restore` before the `dotnet
+    # ef database update` step, working-directory: backend) that's out of scope for this change
+    # since it wasn't one of the findings being addressed here. Promote this job to required once
+    # that's fixed and it has passed on 5 consecutive dev-branch runs.
     continue-on-error: true
     services:
       postgres:
@@ -215,17 +225,13 @@ jobs:
       # docs/operations/frontend-production.md for the dependency-security response process this
       # backs (an unfixed upstream advisory in an existing dependency is a judgment call, not an
       # automatic merge block - only a *newly added* high/critical is).
-      # continue-on-error: confirmed via the GitHub API that this repo's dependency graph is
-      # populated (dependency-graph/sbom returns real data) and that Advanced Security - which
-      # actions/dependency-review-action relies on - "is always available for public repos" (the
-      # API's own error message when an explicit enable was attempted, since it's implicitly
-      # always on for a public repo like this one) - so the action's own
-      # "Dependency graph is enabled" rejection isn't a real, fixable configuration gap on this
-      # repo. Left enabled (not removed) since it may simply need the base ref's snapshot to
-      # finish processing on GitHub's side; non-blocking until it's proven to reliably pass.
+      # Required (not continue-on-error): the "Dependency graph is enabled" rejection this step
+      # used to hit was a stale-snapshot issue, not a real configuration gap (confirmed via the
+      # GitHub API that this repo's dependency graph is populated and Advanced Security is on for
+      # this public repo) - and it's passed on every real PR run checked (3/3) since. Revert to
+      # continue-on-error if it starts failing for a reason unrelated to an actual new advisory.
       - name: Dependency Review
         if: github.event_name == 'pull_request'
-        continue-on-error: true
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high

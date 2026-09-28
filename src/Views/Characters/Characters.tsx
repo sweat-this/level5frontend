@@ -1,4 +1,4 @@
-import { Grid } from "@mui/material";
+import { Grid, Stack, Typography } from "@mui/material";
 import CharacterCard from "./CharacterCard";
 
 const characterData = [
@@ -23,16 +23,21 @@ const characterData = [
 
 export default function Characters() {
   return (
-    <Grid container size={12} spacing={2} columnSpacing={2}>
-      {characterData.map((item) => (
-        <Grid container size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={item.id}>
-          <CharacterCard
-            title={item.name}
-            name={item.name}
-            image={item.image}
-          />
-        </Grid>
-      ))}
-    </Grid>
+    <Stack spacing={{ xs: 3, md: 4 }}>
+      <Typography component="h1" variant="h3" sx={{ fontWeight: 700 }}>
+        Characters
+      </Typography>
+      <Grid container size={12} spacing={2} columnSpacing={2}>
+        {characterData.map((item) => (
+          <Grid container size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={item.id}>
+            <CharacterCard
+              title={item.name}
+              name={item.name}
+              image={item.image}
+            />
+          </Grid>
+        ))}
+      </Grid>
+    </Stack>
   );
 }

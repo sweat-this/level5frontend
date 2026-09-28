@@ -41,12 +41,20 @@ retirement gate status before touching that path or `src/lib/backend-v1-public/*
 
 Requires Node 22+.
 
+`.env.development` is gitignored (it's local-dev convenience only, not read by CI or `next
+build` - see `.env.production`'s own comments) - create it from the template before your first
+run:
+
 ```bash
 npm install
+cp .env.example .env.development
 npm run dev
 ```
 
-The public site works with no further setup. The account portal needs:
+`.env.example`'s defaults for `LEVEL5_V2_API_BASE_URL`, `LEVEL5_APP_ORIGIN`, and
+`LEVEL5_AUTH_CERTIFICATION_ENABLED` already match a typical local setup (Backend V2 on its own
+default port, `next dev`'s own default port, certification routes enabled). The public site
+works with no further setup beyond that copy. The account portal needs:
 
 - Backend V2 running locally (see that repo's own README) and `LEVEL5_V2_API_BASE_URL` pointing
   at it.

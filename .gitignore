@@ -12,6 +12,13 @@ node_modules
 *.tsbuildinfo
 *.local
 
+# .env.development is local-dev convenience only - not read by CI or `next build` (see
+# .env.production's own comment for why *that* file stays tracked). Its own commented-out
+# example shows how to fill in a real Redis keyring secret for local certification against a
+# shared dev Redis; tracking it risked that ever being filled in and committed. Defaults are
+# documented in .env.example instead.
+.env.development
+
 # Playwright (issue #6 account E2E suite)
 /test-results/
 /playwright-report/

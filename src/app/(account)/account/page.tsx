@@ -97,9 +97,13 @@ export default async function AccountPage() {
 
   const { account } = sessionResult;
 
-  // Independent of the account session above (issue #25's "Profile Failure Isolation") - a
-  // temporary profile-read failure degrades Identity to a warning without hiding the rest of the
-  // dashboard, which needs only the account session already resolved.
+  // Deliberately sequential, not Promise.all: resolveIdentitySection() independently re-resolves
+  // auth via its own coordinator call (issue #25's "Profile Failure Isolation" - a temporary
+  // profile-read failure degrades Identity to a warning without hiding the rest of the dashboard).
+  // Running it concurrently with the session read above would issue a second, wasted coordinator
+  // call whenever the session read itself is unavailable/throttled - exactly the failure mode the
+  // coordinator's throttling exists to protect against - since this point is only reached once the
+  // session is already confirmed healthy.
   const identity = await resolveIdentitySection();
 
   if (identity.kind === "redirect") {

@@ -180,6 +180,15 @@ build-time absence were acceptable — they're validated at process *startup* (`
 baked into the build. Build the image/artifact once; supply environment-specific configuration at
 `next start` time.
 
+This "build once" model does **not** apply to `NEXT_PUBLIC_SITE_URL` and
+`NEXT_PUBLIC_LEGACY_API_BASE_URL` — `NEXT_PUBLIC_*` vars are inlined into the client bundle by
+`next build` itself, not read at `next start`. Both must be set in `.env.production` (which
+`next build` loads automatically) *before* running `npm run build` for a real deployment, once a
+real domain/backend exist — see that file's own comments. Left unset, both fail soft today (empty
+string / a `localhost` fallback), which is correct for a project with no deployed domain yet, but
+means a real deployment silently ships with a `localhost` sitemap/OpenGraph/canonical URL and a
+broken legacy-API base URL unless this step is done deliberately, not assumed.
+
 ## Deploy order
 
 1. Deploy/roll out Backend V2 first if the change includes a Backend V2 contract change (this

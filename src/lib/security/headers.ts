@@ -11,7 +11,8 @@
  * per-request - a *statically* rendered page has no per-request value to embed at all, so a
  * nonce can never be correct there regardless of what any Server Component does. Static public
  * routes (`/`, `/level5`, `/level5/modes`, `/level5/characters`, `/level5/versus`,
- * `/level5/leaderboards`, `/level5/drblood` - see proxy.ts's STATIC_PUBLIC_ROUTES) therefore get
+ * `/level5/leaderboards`, `/level5/drblood` - see static-public-routes.ts's STATIC_PUBLIC_ROUTES,
+ * used by proxy.ts here) therefore get
  * `'unsafe-inline'` on script-src instead (a narrower, documented exception - see CspOptions.allowInlineScript)
  * rather than being forced dynamic just to keep a nonce that can't work there anyway; forcing
  * them dynamic was tried first and found to also silently strip their Cache-Control down to the
