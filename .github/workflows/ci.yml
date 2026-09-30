@@ -73,7 +73,11 @@ jobs:
           LEVEL5_WEB_SESSION_REDIS_URL: redis://localhost:6379
 
   e2e-production:
-    runs-on: ubuntu-latest
+    # Pinned (not ubuntu-latest): the committed *-chromium-linux.png visual baselines were taken on
+    # this image, and a runner-image change (fonts/rendering) would otherwise diff them with no
+    # code change. Bump deliberately, regenerating the baselines alongside (see
+    # e2e-production/visual-regression.spec.ts).
+    runs-on: ubuntu-24.04
     # A full real-Backend-V2 pass (issue #10): checks out sweat-this/Level5Backend alongside this
     # repo, brings up a real Postgres + Redis, runs Backend V2's own EF Core migrations, starts it
     # for real, then runs both the dev-mode (e2e/) and production-mode (e2e-production/) Playwright
