@@ -34,6 +34,10 @@ export default defineConfig({
       LEVEL5_V2_API_BASE_URL:
         process.env.LEVEL5_E2E_BACKEND_BASE_URL ?? "http://localhost:5053",
       LEVEL5_APP_ORIGIN: BASE_URL,
+      // e2e/security-no-credential-leak.spec.ts needs the /api/auth-cert/* certification routes.
+      // Set here rather than relying on a developer's gitignored .env.development (gitignored, see
+      // .gitignore), so this suite is self-contained on a fresh checkout and in CI.
+      LEVEL5_AUTH_CERTIFICATION_ENABLED: "true",
       LEVEL5_WEB_SESSION_STORE:
         process.env.LEVEL5_E2E_SESSION_STORE ?? "memory",
       LEVEL5_WEB_SESSION_REDIS_URL:

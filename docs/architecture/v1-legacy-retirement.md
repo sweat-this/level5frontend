@@ -12,6 +12,24 @@ Level5Backend   dev @ 8613c05359e4a2d7cc81a2c8779a4378121157e6
 level5 (Unity)  dev @ 1b8aca97eaaa67ae646e1f0f0a8843386a291f01
 ```
 
+### Re-audit at epic #20 closure (2026-09-29)
+
+```text
+level5frontend  dev @ 3e9299dc72d1c3806a4b1ce397b5d27350d91280
+Level5Backend   dev @ 8613c05359e4a2d7cc81a2c8779a4378121157e6   (unchanged)
+level5 (Unity)  dev @ 446d3cd4de4efc4cf2910abf9360038183b0fe4e
+```
+
+Every gate fact below was re-checked against these SHAs and still holds: Backend is unchanged (both
+leaderboard controllers still `[Authorize]`, still no board-discovery endpoint, still no hosting
+provisioned, still no `legacy_*_links` tables). The only frontend V1 runtime chain is still the one
+listed under [Remaining V1 runtime surface](#remaining-v1-runtime-surface). One relevant Unity
+change since the baseline: Unity's own V1 remote score/account transports have been retired
+(level5 #202, #205), so current Unity builds no longer call V1 score or account endpoints
+(previously shipped builds are outside this audit). Unity still calls V1's version, server-message
+and user-report endpoints (`APIHelper`), and unused V1 high-score URL constants remain in
+`Constants.cs`. None of that closes a gate: full retirement remains blocked.
+
 ## What this document is not
 
 This is not a retirement of the V1 integration. `/level5/leaderboards` still serves its data from
