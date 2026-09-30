@@ -131,17 +131,23 @@ jobs:
       # SHAs are also written to the job summary; the Backend line is the resolved commit, not
       # the branch name.
       - name: Record tested revisions
+        env:
+          # On pull_request runs the checkout is GitHub's synthetic merge commit, which only
+          # exists for this run - so also record the PR head commit that a person can check out.
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           frontend_sha=$(git -C frontend rev-parse HEAD)
           backend_sha=$(git -C backend rev-parse HEAD)
-          echo "Frontend: $frontend_sha"
+          echo "Frontend source commit: $SOURCE_SHA"
+          echo "Frontend tested checkout: $frontend_sha"
           echo "Backend V2 (sweat-this/Level5Backend dev): $backend_sha"
           {
             echo "### Production E2E - tested revisions"
             echo ""
             echo "| Repository | Commit |"
             echo "| --- | --- |"
-            echo "| sweat-this/level5frontend | \`$frontend_sha\` |"
+            echo "| sweat-this/level5frontend (source) | \`$SOURCE_SHA\` |"
+            echo "| sweat-this/level5frontend (checked out) | \`$frontend_sha\` |"
             echo "| sweat-this/Level5Backend (dev) | \`$backend_sha\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
