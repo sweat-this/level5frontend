@@ -124,11 +124,20 @@ export default async function AccountPage() {
           </Alert>
         ) : (
           <Stack spacing={1}>
-            <Typography variant="h6" component="p">
+            <Typography
+              variant="h6"
+              component="p"
+              sx={{ overflowWrap: "anywhere" }}
+            >
               {identity.displayName}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Typography color="text.secondary">{identity.tag}</Typography>
+              <Typography
+                color="text.secondary"
+                sx={{ minWidth: 0, overflowWrap: "anywhere" }}
+              >
+                {identity.tag}
+              </Typography>
               <CopyTagButton tag={identity.tag} />
             </Stack>
             <Typography>
