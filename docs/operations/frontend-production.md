@@ -163,7 +163,7 @@ When configured, this app exports:
   success/invalid/throttled, CAS contention, store unavailable — never a session/player/tag/cursor
   ID).
 - **Unhandled errors**: Next's `onRequestError` hook logs only the route *template* (e.g.
-  `/account/challenges/[seriesId]`, never the concrete URL with real dynamic-segment values), HTTP
+  `/account/games/level5/challenges/[seriesId]`, never the concrete URL with real dynamic-segment values), HTTP
   method, and the active trace ID — never the request/error object, headers, body, stack trace, or
   any session/player/account identifier. The generic error UI surfaces that trace ID as an opaque
   support reference a user can quote when reporting an issue.
