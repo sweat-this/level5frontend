@@ -199,6 +199,25 @@ broken legacy-API base URL unless this step is done deliberately, not assumed.
 3. If the deploy includes a session key rotation, follow the three-stage sequence above; it is
    independent of and can span multiple app deploys.
 
+## What the production E2E job does and does not certify
+
+The `e2e-production` CI job runs against ephemeral Postgres/Redis, a Backend V2 started from
+`sweat-this/Level5Backend`'s `dev` branch (the resolved commit SHA of both repositories is written
+to the job summary and log on every run), and a test-only local HTTPS proxy. It certifies
+app-side behavior under production-like conditions: the `__Host-`/Secure session cookie, security
+headers and CSP, private/no-store caching of account routes, the trusted-client-IP resolver, and the
+account/friends/correspondence flows against a real Backend V2. It does **not** certify any real
+deployment, because none exists yet. These must be verified separately when one does:
+
+- The real ingress strips any client-supplied copy of `LEVEL5_TRUSTED_CLIENT_IP_HEADER` (and other
+  untrusted forwarding headers) and overwrites it with the true client address on every request.
+- Backend V2's `ForwardedHeaders:KnownProxies`/`KnownNetworks` contain only the intended
+  frontend/load-balancer addresses (the test Backend V2 has none configured).
+- Real TLS termination and HSTS behavior at the edge, and the shared production session store
+  (sizing, persistence, availability) rather than a throwaway Redis container.
+- Production-mode Backend V2 rate limits (5 auth requests/minute in `Production`; the E2E backend
+  runs as `Development` with a 1000/minute limit).
+
 ## Diagnosing common failures
 
 | Symptom | Likely cause | Where to look |

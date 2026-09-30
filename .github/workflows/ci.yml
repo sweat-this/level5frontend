@@ -81,15 +81,14 @@ jobs:
     # merge gate, since it's the newest and most cross-repo-dependent job here (see "Do not make
     # optional/manual diagnostics required merge gates until they are deterministic").
     #
-    # Currently failing 100% of the time (checked the last 7 runs on dev), always at "Apply
-    # Backend V2 EF Core migrations", before any frontend/Playwright code runs: `dotnet ef` exits
-    # with "Run \"dotnet tool restore\" to make the \"dotnet-ef\" command available" - the global
-    # `dotnet-ef` install a few steps above doesn't take effect because the checked-out Backend V2
-    # repo has its own local tool manifest, which this workflow never restores. Not a frontend or
-    # Backend V2 product regression - a one-line CI fix (`dotnet tool restore` before the `dotnet
-    # ef database update` step, working-directory: backend) that's out of scope for this change
-    # since it wasn't one of the findings being addressed here. Promote this job to required once
-    # that's fixed and it has passed on 5 consecutive dev-branch runs.
+    # History: this job used to fail 100% of the time at "Apply Backend V2 EF Core migrations"
+    # (a global `dotnet-ef` install never satisfies Backend V2's own pinned local tool manifest;
+    # fixed by "Restore Backend V2 tools" below), and then on the four production visual-regression
+    # tests, which had only Windows baselines committed (Linux baselines now live in
+    # e2e-production/visual-regression.spec.ts-snapshots/). Promote this job to required once it
+    # has passed on 5 consecutive dev-branch runs. Note that `continue-on-error` makes the
+    # *workflow* report success even when this job fails - judge this job by its own conclusion
+    # (`gh run view <id> --json jobs`), not the overall run status.
     continue-on-error: true
     services:
       postgres:
