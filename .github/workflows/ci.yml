@@ -128,6 +128,24 @@ jobs:
           ref: dev
           path: backend
 
+      # Backend `dev` is a moving ref, so record exactly which commits this run certifies. Both
+      # SHAs are also written to the job summary; the Backend line is the resolved commit, not
+      # the branch name.
+      - name: Record tested revisions
+        run: |
+          frontend_sha=$(git -C frontend rev-parse HEAD)
+          backend_sha=$(git -C backend rev-parse HEAD)
+          echo "Frontend: $frontend_sha"
+          echo "Backend V2 (sweat-this/Level5Backend dev): $backend_sha"
+          {
+            echo "### Production E2E - tested revisions"
+            echo ""
+            echo "| Repository | Commit |"
+            echo "| --- | --- |"
+            echo "| sweat-this/level5frontend | \`$frontend_sha\` |"
+            echo "| sweat-this/Level5Backend (dev) | \`$backend_sha\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
@@ -138,8 +156,12 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dotnet-ef
-        run: dotnet tool install --global dotnet-ef --version 10.*
+      # Backend V2 pins its own dotnet-ef in .config/dotnet-tools.json (exact version, no roll
+      # forward). Restoring that manifest is the only source of `dotnet ef` here - a global
+      # install can't satisfy it, and a second version pin in this repo would drift from it.
+      - name: Restore Backend V2 tools
+        working-directory: backend
+        run: dotnet tool restore
 
       - name: Restore Backend V2 NuGet packages
         working-directory: backend
@@ -160,25 +182,42 @@ jobs:
         # every run, never persisted past the job, never a real secret.
         run: echo "key=$(openssl rand -base64 64)" >> "$GITHUB_OUTPUT"
 
+      # Built separately (and started with --no-build below) so the readiness wait that follows
+      # measures the service starting, not `dotnet run` compiling it.
+      - name: Build Backend V2
+        working-directory: backend
+        run: dotnet build v2/src/Level5.Api --no-restore
+
       - name: Start Backend V2
         working-directory: backend
-        run: nohup dotnet run --project v2/src/Level5.Api --urls http://localhost:5250 > "$GITHUB_WORKSPACE/backend.log" 2>&1 &
+        run: |
+          nohup dotnet run --no-build --project v2/src/Level5.Api --urls http://localhost:5250 > "$GITHUB_WORKSPACE/backend.log" 2>&1 &
+          echo $! > "$GITHUB_WORKSPACE/backend.pid"
         env:
           ConnectionStrings__DefaultConnection: "Host=127.0.0.1;Port=5432;Database=level5_v2;Username=level5;Password=ci-password"
           Jwt__Key: ${{ steps.jwt.outputs.key }}
           ASPNETCORE_ENVIRONMENT: Development
 
-      - name: Wait for Backend V2 to accept requests
+      # /health/ready (Program.cs) runs Backend V2's own "ready"-tagged health checks - i.e. it
+      # only returns 200 once the app can actually reach Postgres - so an HTTP response of any
+      # other kind (a 404, a 500, a 503 while a dependency is down) is not treated as ready. Also
+      # stops early if the process has already exited, rather than polling a dead port.
+      - name: Wait for Backend V2 to be ready
         run: |
-          for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:5250/api/v2/auth/login -H "content-type: application/json" -d '{}') || code=000
-            if [ "$code" != "000" ]; then
-              echo "Backend V2 responded ($code) after $i attempt(s)."
+          for i in $(seq 1 45); do
+            if ! kill -0 "$(cat "$GITHUB_WORKSPACE/backend.pid")" 2>/dev/null; then
+              echo "Backend V2 process exited before becoming ready - backend.log:"
+              cat "$GITHUB_WORKSPACE/backend.log" || true
+              exit 1
+            fi
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5250/health/ready) || code=000
+            if [ "$code" = "200" ]; then
+              echo "Backend V2 ready (/health/ready 200) after $i attempt(s)."
               exit 0
             fi
             sleep 2
           done
-          echo "Backend V2 never responded - see backend.log"
+          echo "Backend V2 /health/ready never returned 200 (last status: $code) - backend.log:"
           cat "$GITHUB_WORKSPACE/backend.log" || true
           exit 1
 
@@ -187,6 +226,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
+        id: playwright
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
@@ -197,7 +237,10 @@ jobs:
           CI: "true"
           LEVEL5_E2E_BACKEND_BASE_URL: http://localhost:5250
 
+      # Runs even if the dev-mode suite failed (as long as setup got this far), so one run reports
+      # the real result of both suites; the job still fails if either does.
       - name: Production-mode e2e suite
+        if: ${{ !cancelled() && steps.playwright.conclusion == 'success' }}
         working-directory: frontend
         run: npm run test:e2e:production
         env:
@@ -210,6 +253,15 @@ jobs:
         with:
           name: backend-v2-log
           path: backend.log
+          if-no-files-found: ignore
+
+      # Playwright traces, and for a failed toHaveScreenshot() the actual/expected/diff images.
+      - name: Upload Playwright results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: frontend/test-results
           if-no-files-found: ignore
 
   security:
