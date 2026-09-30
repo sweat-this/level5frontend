@@ -176,7 +176,12 @@ export default async function AccountPage() {
             <Typography component="dt" sx={{ fontWeight: "bold", margin: 0 }}>
               Username:
             </Typography>
-            <Typography component="dd" sx={{ margin: 0 }}>
+            {/* A username is up to 32 unbreakable characters (Backend V2 Username): without
+                wrapping, a wide one forces this flex row - and the page - wider than a phone. */}
+            <Typography
+              component="dd"
+              sx={{ margin: 0, minWidth: 0, overflowWrap: "anywhere" }}
+            >
               {account.username}
             </Typography>
           </Stack>
