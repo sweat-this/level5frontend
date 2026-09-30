@@ -21,6 +21,7 @@ node_modules
 
 # Playwright (issue #6 account E2E suite)
 /test-results/
+/test-results-dev/
 /playwright-report/
 /blob-report/
 /playwright/.cache/

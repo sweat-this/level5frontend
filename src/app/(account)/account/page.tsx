@@ -124,11 +124,20 @@ export default async function AccountPage() {
           </Alert>
         ) : (
           <Stack spacing={1}>
-            <Typography variant="h6" component="p">
+            <Typography
+              variant="h6"
+              component="p"
+              sx={{ overflowWrap: "anywhere" }}
+            >
               {identity.displayName}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Typography color="text.secondary">{identity.tag}</Typography>
+              <Typography
+                color="text.secondary"
+                sx={{ minWidth: 0, overflowWrap: "anywhere" }}
+              >
+                {identity.tag}
+              </Typography>
               <CopyTagButton tag={identity.tag} />
             </Stack>
             <Typography>
@@ -176,7 +185,12 @@ export default async function AccountPage() {
             <Typography component="dt" sx={{ fontWeight: "bold", margin: 0 }}>
               Username:
             </Typography>
-            <Typography component="dd" sx={{ margin: 0 }}>
+            {/* A username is up to 32 unbreakable characters (Backend V2 Username): without
+                wrapping, a wide one forces this flex row - and the page - wider than a phone. */}
+            <Typography
+              component="dd"
+              sx={{ margin: 0, minWidth: 0, overflowWrap: "anywhere" }}
+            >
               {account.username}
             </Typography>
           </Stack>

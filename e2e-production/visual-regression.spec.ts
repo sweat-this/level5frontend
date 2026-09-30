@@ -8,12 +8,15 @@ import { expect, test } from "@playwright/test";
 //
 // The CI `e2e-production` job (Ubuntu + Chromium) is the authoritative baseline environment -
 // cross-OS font/rendering differences make pixel snapshots inherently environment-sensitive, and
-// Playwright's own snapshot naming already keys baselines by platform (this file's baselines
-// taken locally on Windows land in *-win32.png, never compared against a Linux CI run). That job
-// is currently informational (continue-on-error: true - see ci.yml and this repo's issue #10
-// notes), so a visual diff here does not yet block a merge; promoting it to a required gate is a
-// CI/branch-protection decision that belongs to that job's own ownership, not to this
-// UX-certification issue.
+// Playwright's own snapshot naming already keys baselines by platform (*-win32.png baselines taken
+// locally on Windows are never compared against a Linux CI run, which uses *-chromium-linux.png).
+// The committed Linux baselines are the runner's own screenshots, so they match the exact font
+// stack the job renders with. CI never updates them: to change one deliberately, push the change,
+// download the failed run's `playwright-test-results` artifact, review the `*-actual.png` image(s),
+// and commit them as the new `*-chromium-linux.png`. That job is currently informational
+// (continue-on-error: true - see ci.yml and this repo's issue #10 notes), so a visual diff here
+// does not yet block a merge; promoting it to a required gate is a CI/branch-protection decision
+// that belongs to that job's own ownership, not to this UX-certification issue.
 //
 // Deliberately excludes anything with per-viewer/per-run content (Player Tags, generated
 // usernames, timestamps, series ids, friend data) - the semantic/responsive E2E suites already

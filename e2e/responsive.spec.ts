@@ -101,8 +101,14 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
     test("account dashboard and the Level 5 game-data page stay usable with no horizontal overflow", async ({
       page,
     }) => {
-      const username = uniqueUsername(`e2er_${name.slice(0, 2)}dash`);
-      await registerNewAccount(page, username, "Responsive Dashboard Player");
+      // Worst case the dashboard has to fit: Backend V2 allows a username of up to 32 and a
+      // display name of up to 32 unbreakable characters, and derives the Player Tag from the
+      // display name's first 20 letters/digits (uppercased) plus "#dddd". Uppercase W is among the
+      // widest glyphs. Random letters here made this test pass or fail by chance of the letters
+      // drawn.
+      const username = `${"W".repeat(19)}${Date.now()}`;
+      expect(username).toHaveLength(32);
+      await registerNewAccount(page, username, "W".repeat(32));
 
       await expect(
         page.getByRole("heading", { level: 1, name: "Account" }),
