@@ -237,7 +237,10 @@ jobs:
 
       - name: Dev-mode e2e suite
         working-directory: frontend
-        run: npm run test:e2e
+        # Playwright wipes its output dir at the start of every run, and both configs default to
+        # test-results/ - a separate dir keeps this suite's failure traces alive for the upload
+        # step below even though the production suite runs after it.
+        run: npm run test:e2e -- --output=test-results-dev
         env:
           CI: "true"
           LEVEL5_E2E_BACKEND_BASE_URL: http://localhost:5250
@@ -266,7 +269,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results
-          path: frontend/test-results
+          path: |
+            frontend/test-results
+            frontend/test-results-dev
           if-no-files-found: ignore
 
   security:
