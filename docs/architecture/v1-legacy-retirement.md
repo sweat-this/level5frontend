@@ -7,28 +7,36 @@ searches below) before touching `/level5/leaderboards` or `src/lib/backend-v1-pu
 ## Audited baseline
 
 ```text
-level5frontend  dev @ 979d36524ab38d4e8b589550cc7c681e017000a9
-Level5Backend   dev @ 8613c05359e4a2d7cc81a2c8779a4378121157e6
-level5 (Unity)  dev @ 1b8aca97eaaa67ae646e1f0f0a8843386a291f01
+level5frontend  dev @ 6f62f09142c8a97624fac9f817dbedbdc1addf2b
+Level5Backend   dev @ 5c8961a673a5ad7eb5e10719f1a2561180a540d1
+level5 (Unity)  dev @ d90e5e0bc800338db270762a213074ed2107163d
 ```
 
-### Re-audit at epic #20 closure (2026-09-29)
+These are the fetched `origin/dev` tips audited on 2026-10-02, not cached local assumptions. There
+were no open pull requests in any of the three repositories at the time of the audit, so there was
+no pending leaderboard, result, authentication, or deployment change to reconcile with these tips.
 
-```text
-level5frontend  dev @ 3e9299dc72d1c3806a4b1ce397b5d27350d91280
-Level5Backend   dev @ 8613c05359e4a2d7cc81a2c8779a4378121157e6   (unchanged)
-level5 (Unity)  dev @ 446d3cd4de4efc4cf2910abf9360038183b0fe4e
-```
+### Re-audit for issue #29 (2026-10-02)
 
-Every gate fact below was re-checked against these SHAs and still holds: Backend is unchanged (both
-leaderboard controllers still `[Authorize]`, still no board-discovery endpoint, still no hosting
-provisioned, still no `legacy_*_links` tables). The only frontend V1 runtime chain is still the one
-listed under [Remaining V1 runtime surface](#remaining-v1-runtime-surface). One relevant Unity
-change since the baseline: Unity's own V1 remote score/account transports have been retired
-(level5 #202, #205), so current Unity builds no longer call V1 score or account endpoints
-(previously shipped builds are outside this audit). Unity still calls V1's version, server-message
-and user-report endpoints (`APIHelper`), and unused V1 high-score URL constants remain in
-`Constants.cs`. None of that closes a gate: full retirement remains blocked.
+Every gate fact below was re-checked against the SHAs above. Backend advanced from the issue's prior
+`a37aad0` reference only through PR #49's result/leaderboard trust-contract documentation; the V2
+controllers and policy/discovery surface did not change. The only frontend V1 runtime chain is still
+the one listed under [Remaining V1 runtime surface](#remaining-v1-runtime-surface). Unity's V1
+remote score/leaderboard transport remains retired and its online leaderboard UI still reads V2.
+None of the repository changes closes a retirement gate.
+
+Current repository V1 surface:
+
+- **Frontend:** the public `/level5/leaderboards` chain below is the only active V1 browser runtime
+  dependency. The old V1 current-version/server-health hooks remain deleted; the frontend's own
+  `/health/live` and `/health/ready` routes are unrelated platform probes.
+- **Backend:** anonymous V1 high-score reads, including `GET /api/highscores`, remain available for
+  the retained frontend. V1 score `POST`, `PUT`, `DELETE`, and `POST unsubmitted` mutations return
+  `410 Gone` with `legacy_score_transport_retired`.
+- **Unity:** no production V1 remote score/leaderboard calls remain. The retirement regression test
+  rejects the old `APIHelper` score methods and production endpoint constants. Two localhost-only
+  high-score constants remain unused; unrelated V1 runtime calls for application version, server
+  messages, and user reports remain outside this issue's score/leaderboard scope.
 
 ## What this document is not
 
@@ -91,6 +99,21 @@ to `/api/v2/match-results` and retries across process restarts - but only for re
 a valid Backend V2 player session at match completion. Pre-existing unauthenticated/local scores
 do not backfill.
 
+Unity's online stats path is also already cut over to V2:
+
+```text
+StatsManager
+  -> OnlineLeaderboardFilterTranslator
+  -> OnlineLeaderboardPaginationState
+  -> BackendV2Runtime.Leaderboards / ILeaderboardsApiClient
+  -> LeaderboardsApiClient
+  -> GET /api/v2/leaderboards/{modeId}
+  -> LeaderboardEntryPresentationMapper
+```
+
+The client passes Backend-provided cursors through opaquely and does not duplicate the server's
+mode-to-metric or ranking-direction policy.
+
 The frontend's pinned OpenAPI snapshot (`src/generated/level5-v2.ts`) already contains both
 contracts. None of this is rebuilt or duplicated by this issue.
 
@@ -100,27 +123,34 @@ contracts. None of this is rebuilt or duplicated by this issue.
 
 `Level5Backend/v2/README.md`'s own Status section states plainly: "no hosting provider, PostgreSQL
 instance, or staging/production environment has been selected or provisioned by this repository."
-The repo has a deployment *image* and a migration *bundle* (issue #42) - a packaging capability,
-not a hosted endpoint. There is no staging/production V2 URL for any client to reach. This is the
-single decisive blocker; every other gate is secondary while this one holds.
+The repo has a deployment *image* and a migration *bundle* (Backend PR #42) - a packaging capability,
+not a hosted endpoint. Current GitHub repository metadata also reports zero deployments, zero
+environments, and no repository-level Actions variables or secrets. No real Backend V2 URL or
+PostgreSQL environment was supplied in issue #29 or its comments. Therefore no staging/production
+V2 endpoint is available for this retirement audit to reach. This is the single decisive blocker;
+every other gate is secondary while this one holds.
 
 ### Gate B - public vs. authenticated leaderboard access: BLOCKED (undecided)
 
 `LeaderboardsController` and `MatchResultsController` are both `[Authorize]` - V2 has no anonymous
 leaderboard-read contract today. `/level5/leaderboards` is currently public/anonymous. No product
-decision has been made to (a) add an intentionally anonymous safe V2 read contract, (b) migrate the
-route to authenticated BFF access, or (c) remove the capability. Do not resolve this by silently
-proxying the authenticated endpoint with a hidden service credential, and do not silently require
+decision has been made to (a) remove the web leaderboard, (b) retain it behind authenticated BFF
+access, or (c) retain it as an intentionally anonymous safe V2 read. Issue #29 has no comments or
+decision record; parent issue #20 and issue #23 only say to preserve the legacy route unadvertised
+until hosted results exist. Do not resolve this by silently proxying the authenticated endpoint with
+a hidden service credential, exposing a bearer token to browser JavaScript, or silently requiring
 login for a page that is public today.
 
-### Gate C - supported-board discovery: BLOCKED (not built)
+### Gate C - supported-board discovery: UNRESOLVED (conditional on Gate B)
 
 Backend V2's controllers are `AccountController`, `AuthController`, `FriendsController`,
 `LeaderboardsController`, `MatchResultsController`, `PlayersController`, `SeriesController` - no
 discovery endpoint exists for "which mode ids have boards, with what ranking metric/direction."
 `StaticLeaderboardPolicyCatalog` is server-internal only. A production web client needs an
 authoritative way to enumerate supported boards; probing mode ids and reading 400s is not
-discovery and must not be built as a substitute.
+discovery and must not be built as a substitute. If Gate B chooses a browsable multi-mode web
+leaderboard, the smallest prerequisite is a read-only projection of the existing catalog. If Gate B
+chooses removal, discovery is not required and must not be built for this issue.
 
 ### Gate D - historical data: DECIDED (fresh start, no migration)
 
@@ -140,23 +170,36 @@ There is no hosted environment to certify a real
 `Unity match -> V2 match-results -> persisted row -> V2 leaderboard read -> web-visible row` path
 against. Unit/integration test coverage of the Unity submission pipeline and the Backend V2
 leaderboard query exists independently, but per the issue's own instruction this cannot substitute
-for the final retirement decision.
+for the final retirement decision. No such staging evidence is recorded in issue #29. This gate is
+required only if Gate B retains a web leaderboard; an explicit removal decision would make the
+replacement E2E path inapplicable.
+
+## Known stale documentation outside this repository
+
+`Level5Backend/v2/README.md` still contains a roadmap sentence saying leaderboards/highscores come
+only after the correspondence vertical slice is proven in production, even though the same current
+README and current source document and implement V2 match-result ingestion and leaderboard reads.
+Current source and the canonical V2 result/leaderboard trust contract are authoritative. This
+frontend gate-record update does not edit unrelated Backend documentation.
 
 ## Exact conditions required before V1 deletion
 
-All of the following, in this order, with evidence recorded here (not inferred from code):
+All applicable conditions below, in this order, with evidence recorded here (not inferred from
+code):
 
 1. A real staging/production Backend V2 URL exists and is reachable by the frontend/Unity clients
    (closes Gate A).
-2. An explicit product decision on public-vs-authenticated V2 leaderboard access is made and
-   implemented (closes Gate B).
-3. Backend V2 ships a supported-board discovery contract the web client can call (closes Gate C).
+2. An explicit product decision selects removal, authenticated/account-only access, or
+   public/anonymous access (closes Gate B).
+3. If the web leaderboard is retained as a browsable multi-mode experience, Backend V2 ships a
+   supported-board discovery contract the web client can call (closes Gate C). Removal makes this
+   condition inapplicable.
 4. (Already satisfied - see Gate D.)
-5. A real end-to-end run against the hosted environment from (1) - an actual Unity match, a real
-   V2 player session, a persisted `match_results` row, a V2 leaderboard read, and the expected
-   row rendered on the web - is performed and its result recorded here.
+5. If the web leaderboard is retained, a real end-to-end run against the hosted environment from
+   (1) - an actual Unity match, a real V2 player session, a persisted `match_results` row, a V2
+   leaderboard read, and the expected row rendered on the web - is performed and its result
+   recorded here. Removal makes this replacement certification inapplicable.
 
-Only once all five hold does issue #29's "V2-native leaderboard implementation, remove remaining
-V1 dependencies" scope become in-scope. Until then, the work in this issue is limited to what
-[section 7 of the issue](https://github.com/sweat-this/level5frontend/issues/29) calls "safe
-cleanup" - which is what this pass did.
+Only once the applicable gates hold does issue #29's destructive V1 removal become in-scope. Until
+then, preserve the isolated V1 route. This 2026-10-02 pass updated evidence only; it changed no
+runtime code, dependencies, environment variables, CSP policy, or route behavior.
