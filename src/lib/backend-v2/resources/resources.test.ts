@@ -248,6 +248,17 @@ describe("backend-v2 resource clients", () => {
       );
     });
 
+    it("listHistory builds the history query string and retries", async () => {
+      await series.listHistory("token", { limit: 15, cursor: "history==" });
+      expect(requestMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "GET",
+          path: "/api/v2/series/history?limit=15&cursor=history%3D%3D",
+          retry: SAFE_READ_RETRY_POLICY,
+        }),
+      );
+    });
+
     it("accept/decline/cancel are mutations - no retry", async () => {
       await series.accept("series-1", "token");
       await series.decline("series-1", "token");

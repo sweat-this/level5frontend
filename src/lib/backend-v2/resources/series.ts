@@ -1,9 +1,9 @@
 import "server-only";
 import {
-  request,
-  SAFE_READ_RETRY_POLICY,
-  type TransportResult,
-} from "../transport";
+  resourceRequest,
+  type BackendV2ContractPath,
+} from "../resource-request";
+import { SAFE_READ_RETRY_POLICY, type TransportResult } from "../transport";
 import type {
   SeriesDetails,
   SeriesResponse,
@@ -42,8 +42,9 @@ export function getSeries(
   accessToken: string,
   signal?: AbortSignal,
 ): Promise<TransportResult<SeriesDetails>> {
-  return request<SeriesDetails>({
+  return resourceRequest<SeriesDetails>({
     method: "GET",
+    contractPath: "/api/v2/series/{seriesId}",
     path: `/api/v2/series/${encodeURIComponent(seriesId)}`,
     operationName: "series.get",
     accessToken,
@@ -53,15 +54,16 @@ export function getSeries(
 }
 
 function listPage(
-  path: string,
+  contractPath: BackendV2ContractPath,
   operationName: string,
   params: ListSeriesPageParams | undefined,
   accessToken: string,
   signal: AbortSignal | undefined,
 ): Promise<TransportResult<SeriesSummaryPage>> {
-  return request<SeriesSummaryPage>({
+  return resourceRequest<SeriesSummaryPage>({
     method: "GET",
-    path: `${path}${listQuery(params)}`,
+    contractPath,
+    path: `${contractPath}${listQuery(params)}`,
     operationName,
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
@@ -150,8 +152,9 @@ export function accept(
   seriesId: string,
   accessToken: string,
 ): Promise<TransportResult<SeriesResponse>> {
-  return request<SeriesResponse>({
+  return resourceRequest<SeriesResponse>({
     method: "POST",
+    contractPath: "/api/v2/series/{seriesId}/accept",
     path: `/api/v2/series/${encodeURIComponent(seriesId)}/accept`,
     operationName: "series.accept",
     accessToken,
@@ -162,8 +165,9 @@ export function decline(
   seriesId: string,
   accessToken: string,
 ): Promise<TransportResult<SeriesResponse>> {
-  return request<SeriesResponse>({
+  return resourceRequest<SeriesResponse>({
     method: "POST",
+    contractPath: "/api/v2/series/{seriesId}/decline",
     path: `/api/v2/series/${encodeURIComponent(seriesId)}/decline`,
     operationName: "series.decline",
     accessToken,
@@ -174,8 +178,9 @@ export function cancel(
   seriesId: string,
   accessToken: string,
 ): Promise<TransportResult<SeriesResponse>> {
-  return request<SeriesResponse>({
+  return resourceRequest<SeriesResponse>({
     method: "POST",
+    contractPath: "/api/v2/series/{seriesId}/cancel",
     path: `/api/v2/series/${encodeURIComponent(seriesId)}/cancel`,
     operationName: "series.cancel",
     accessToken,
