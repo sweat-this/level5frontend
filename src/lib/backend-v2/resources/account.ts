@@ -1,5 +1,6 @@
 import "server-only";
-import { request, type RetryPolicy, type TransportResult } from "../transport";
+import { resourceRequest } from "../resource-request";
+import type { RetryPolicy, TransportResult } from "../transport";
 import type { CurrentAccount } from "../contracts";
 
 export interface GetCurrentAccountOptions {
@@ -20,9 +21,9 @@ export function getCurrentAccount(
   accessToken: string,
   options: GetCurrentAccountOptions = {},
 ): Promise<TransportResult<CurrentAccount>> {
-  return request<CurrentAccount>({
+  return resourceRequest<CurrentAccount>({
     method: "GET",
-    path: "/api/v2/me",
+    contractPath: "/api/v2/me",
     operationName: "account.me",
     accessToken,
     retry: options.retry,

@@ -1,9 +1,6 @@
 import "server-only";
-import {
-  request,
-  type ClientIpOverride,
-  type TransportResult,
-} from "../transport";
+import { resourceRequest } from "../resource-request";
+import type { ClientIpOverride, TransportResult } from "../transport";
 import type { BackendCredentials } from "../contracts";
 
 /**
@@ -22,9 +19,9 @@ export function register(
   ip?: ClientIpOverride,
   baseUrl?: string,
 ): Promise<TransportResult<BackendCredentials>> {
-  return request<BackendCredentials>({
+  return resourceRequest<BackendCredentials>({
     method: "POST",
-    path: "/api/v2/auth/register",
+    contractPath: "/api/v2/auth/register",
     operationName: "auth.register",
     body: { username, password, displayName },
     ip,
@@ -38,9 +35,9 @@ export function login(
   ip?: ClientIpOverride,
   baseUrl?: string,
 ): Promise<TransportResult<BackendCredentials>> {
-  return request<BackendCredentials>({
+  return resourceRequest<BackendCredentials>({
     method: "POST",
-    path: "/api/v2/auth/login",
+    contractPath: "/api/v2/auth/login",
     operationName: "auth.login",
     body: { username, password },
     ip,
@@ -53,9 +50,9 @@ export function refresh(
   ip?: ClientIpOverride,
   baseUrl?: string,
 ): Promise<TransportResult<BackendCredentials>> {
-  return request<BackendCredentials>({
+  return resourceRequest<BackendCredentials>({
     method: "POST",
-    path: "/api/v2/auth/refresh",
+    contractPath: "/api/v2/auth/refresh",
     operationName: "auth.refresh",
     body: { refreshToken },
     ip,
@@ -68,9 +65,9 @@ export function logout(
   ip?: ClientIpOverride,
   baseUrl?: string,
 ): Promise<TransportResult<undefined>> {
-  return request<undefined>({
+  return resourceRequest<undefined>({
     method: "POST",
-    path: "/api/v2/auth/logout",
+    contractPath: "/api/v2/auth/logout",
     operationName: "auth.logout",
     body: { refreshToken },
     ip,

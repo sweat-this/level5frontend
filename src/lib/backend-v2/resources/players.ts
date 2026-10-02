@@ -1,9 +1,6 @@
 import "server-only";
-import {
-  request,
-  SAFE_READ_RETRY_POLICY,
-  type TransportResult,
-} from "../transport";
+import { resourceRequest } from "../resource-request";
+import { SAFE_READ_RETRY_POLICY, type TransportResult } from "../transport";
 import type { PlayerProfile } from "../contracts";
 
 /** Backend V2's `/api/v2/players/*` surface - near-term operations only (issue #4). */
@@ -13,8 +10,9 @@ export function getByTag(
   accessToken: string,
   signal?: AbortSignal,
 ): Promise<TransportResult<PlayerProfile>> {
-  return request<PlayerProfile>({
+  return resourceRequest<PlayerProfile>({
     method: "GET",
+    contractPath: "/api/v2/players/by-tag/{tag}",
     path: `/api/v2/players/by-tag/${encodeURIComponent(tag)}`,
     operationName: "players.getByTag",
     accessToken,
@@ -27,9 +25,9 @@ export function getMyPlayerId(
   accessToken: string,
   signal?: AbortSignal,
 ): Promise<TransportResult<string>> {
-  return request<string>({
+  return resourceRequest<string>({
     method: "GET",
-    path: "/api/v2/players/me",
+    contractPath: "/api/v2/players/me",
     operationName: "players.getMyPlayerId",
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
@@ -46,9 +44,9 @@ export function getMyProfile(
   accessToken: string,
   signal?: AbortSignal,
 ): Promise<TransportResult<PlayerProfile>> {
-  return request<PlayerProfile>({
+  return resourceRequest<PlayerProfile>({
     method: "GET",
-    path: "/api/v2/players/me/profile",
+    contractPath: "/api/v2/players/me/profile",
     operationName: "players.getMyProfile",
     accessToken,
     retry: SAFE_READ_RETRY_POLICY,
@@ -61,9 +59,9 @@ export function updateMyProfile(
   displayName: string,
   accessToken: string,
 ): Promise<TransportResult<PlayerProfile>> {
-  return request<PlayerProfile>({
+  return resourceRequest<PlayerProfile>({
     method: "PATCH",
-    path: "/api/v2/players/me",
+    contractPath: "/api/v2/players/me",
     operationName: "players.updateMyProfile",
     body: { displayName },
     accessToken,
