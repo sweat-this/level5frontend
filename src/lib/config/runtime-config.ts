@@ -29,10 +29,13 @@ export function assertValidBackendBaseUrl(value: string): void {
   if (url.pathname !== "/" && url.pathname !== "") {
     throw new Error("LEVEL5_V2_API_BASE_URL must not include a path.");
   }
-  if (url.search) {
+  // URL.search/url.hash are empty for a bare trailing delimiter ("?" or "#"), but preserving
+  // either delimiter in the configured string would make transport.ts append its request path
+  // as a query or fragment instead of as the URL pathname.
+  if (url.search || url.href.includes("?")) {
     throw new Error("LEVEL5_V2_API_BASE_URL must not include a query string.");
   }
-  if (url.hash) {
+  if (url.hash || url.href.includes("#")) {
     throw new Error("LEVEL5_V2_API_BASE_URL must not include a fragment.");
   }
 }
@@ -61,10 +64,10 @@ export function assertValidAppOrigin(value: string): void {
   if (url.pathname !== "/" && url.pathname !== "") {
     throw new Error("LEVEL5_APP_ORIGIN must not include a path.");
   }
-  if (url.search) {
+  if (url.search || url.href.includes("?")) {
     throw new Error("LEVEL5_APP_ORIGIN must not include a query string.");
   }
-  if (url.hash) {
+  if (url.hash || url.href.includes("#")) {
     throw new Error("LEVEL5_APP_ORIGIN must not include a fragment.");
   }
 }

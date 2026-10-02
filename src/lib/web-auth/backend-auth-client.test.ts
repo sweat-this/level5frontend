@@ -269,7 +269,12 @@ describe("BackendAuthClient", () => {
     it.each(malformedCredentialCases)(
       "rejects %s for register, login, and refresh",
       async (_description, credentials) => {
-        fetchMock.mockResolvedValue(jsonResponse(200, credentials));
+        // A Response body is one-shot. Return a fresh response for each operation so all three
+        // assertions exercise credential validation rather than later calls degrading through
+        // transport's invalid-response path after register consumes a shared body.
+        fetchMock.mockImplementation(() =>
+          Promise.resolve(jsonResponse(200, credentials)),
+        );
         const client = new BackendAuthClient(BASE_URL);
 
         await expect(

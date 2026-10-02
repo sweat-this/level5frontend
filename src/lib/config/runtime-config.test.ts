@@ -66,9 +66,21 @@ describe("assertValidBackendBaseUrl", () => {
     ).toThrow(/query string/);
   });
 
+  it("rejects an empty query delimiter", () => {
+    expect(() =>
+      assertValidBackendBaseUrl("https://backend.example.com?"),
+    ).toThrow(/query string/);
+  });
+
   it("rejects a fragment", () => {
     expect(() =>
       assertValidBackendBaseUrl("https://backend.example.com#fragment"),
+    ).toThrow(/fragment/);
+  });
+
+  it("rejects an empty fragment delimiter", () => {
+    expect(() =>
+      assertValidBackendBaseUrl("https://backend.example.com#"),
     ).toThrow(/fragment/);
   });
 });
@@ -108,8 +120,20 @@ describe("assertValidAppOrigin", () => {
     );
   });
 
+  it("rejects an empty query delimiter", () => {
+    expect(() => assertValidAppOrigin("https://app.example.com?")).toThrow(
+      /query string/,
+    );
+  });
+
   it("rejects a fragment", () => {
     expect(() => assertValidAppOrigin("https://app.example.com#x")).toThrow(
+      /fragment/,
+    );
+  });
+
+  it("rejects an empty fragment delimiter", () => {
+    expect(() => assertValidAppOrigin("https://app.example.com#")).toThrow(
       /fragment/,
     );
   });
