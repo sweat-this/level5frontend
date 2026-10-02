@@ -107,14 +107,13 @@ two contexts):
 - `redis-integration` — the same unit suite again with the real-Redis-backed session-store tests
   enabled.
 
-Two more jobs run on every PR but are `continue-on-error` and **not** required checks, so either
-can fail outright without blocking a merge — see `ci.yml`'s own comments for why (a cross-repo,
-real-Backend-V2 E2E job and a dependency-graph-dependent scan are both judged not yet reliable
-enough to gate merges on):
+Two more jobs run on every PR but are **not** required checks:
 
 - `e2e-production` — checks out Backend V2, brings up real Postgres/Redis, and runs both the
-  dev-mode and production-mode Playwright suites against it.
-- `security` — a PR-diff dependency vulnerability scan (`actions/dependency-review-action`) plus
-  an informational `npm audit`.
+  dev-mode and production-mode Playwright suites against it. The job remains
+  `continue-on-error` until its documented five-green-`dev`-push promotion threshold is met.
+- `security` — a PR-diff dependency vulnerability scan (`actions/dependency-review-action`) that
+  fails the job for newly introduced high/critical advisories, plus an informational `npm audit`.
+  The job itself is not `continue-on-error`, but branch protection does not yet require it.
 
 `dev` is protected — changes land through reviewed pull requests.

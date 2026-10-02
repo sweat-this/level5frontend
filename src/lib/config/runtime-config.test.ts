@@ -32,6 +32,12 @@ describe("assertValidBackendBaseUrl", () => {
     ).not.toThrow();
   });
 
+  it("accepts a bare origin with a trailing slash (root path)", () => {
+    expect(() =>
+      assertValidBackendBaseUrl("https://backend.example.com/"),
+    ).not.toThrow();
+  });
+
   it("rejects a relative value", () => {
     expect(() => assertValidBackendBaseUrl("/api")).toThrow(/absolute URL/);
   });
@@ -46,6 +52,36 @@ describe("assertValidBackendBaseUrl", () => {
     expect(() =>
       assertValidBackendBaseUrl("https://user:pass@backend.example.com"),
     ).toThrow(/username or password/);
+  });
+
+  it("rejects a path", () => {
+    expect(() =>
+      assertValidBackendBaseUrl("https://backend.example.com/path"),
+    ).toThrow(/must not include a path/);
+  });
+
+  it("rejects a query string", () => {
+    expect(() =>
+      assertValidBackendBaseUrl("https://backend.example.com?x=1"),
+    ).toThrow(/query string/);
+  });
+
+  it("rejects an empty query delimiter", () => {
+    expect(() =>
+      assertValidBackendBaseUrl("https://backend.example.com?"),
+    ).toThrow(/query string/);
+  });
+
+  it("rejects a fragment", () => {
+    expect(() =>
+      assertValidBackendBaseUrl("https://backend.example.com#fragment"),
+    ).toThrow(/fragment/);
+  });
+
+  it("rejects an empty fragment delimiter", () => {
+    expect(() =>
+      assertValidBackendBaseUrl("https://backend.example.com#"),
+    ).toThrow(/fragment/);
   });
 });
 
@@ -84,8 +120,20 @@ describe("assertValidAppOrigin", () => {
     );
   });
 
+  it("rejects an empty query delimiter", () => {
+    expect(() => assertValidAppOrigin("https://app.example.com?")).toThrow(
+      /query string/,
+    );
+  });
+
   it("rejects a fragment", () => {
     expect(() => assertValidAppOrigin("https://app.example.com#x")).toThrow(
+      /fragment/,
+    );
+  });
+
+  it("rejects an empty fragment delimiter", () => {
+    expect(() => assertValidAppOrigin("https://app.example.com#")).toThrow(
       /fragment/,
     );
   });
