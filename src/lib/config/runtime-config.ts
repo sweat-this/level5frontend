@@ -26,6 +26,15 @@ export function assertValidBackendBaseUrl(value: string): void {
       "LEVEL5_V2_API_BASE_URL must not embed a username or password.",
     );
   }
+  if (url.pathname !== "/" && url.pathname !== "") {
+    throw new Error("LEVEL5_V2_API_BASE_URL must not include a path.");
+  }
+  if (url.search) {
+    throw new Error("LEVEL5_V2_API_BASE_URL must not include a query string.");
+  }
+  if (url.hash) {
+    throw new Error("LEVEL5_V2_API_BASE_URL must not include a fragment.");
+  }
 }
 
 /**

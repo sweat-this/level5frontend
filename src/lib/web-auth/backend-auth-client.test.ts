@@ -10,6 +10,41 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
+const validCredentials = {
+  accessToken: "a",
+  expiresAt: "2030-01-01T00:00:00Z",
+  playerId: "p1",
+  refreshToken: "r",
+  refreshTokenExpiresAt: "2030-02-01T00:00:00Z",
+};
+
+const malformedCredentialCases: ReadonlyArray<
+  readonly [description: string, credentials: Record<string, unknown>]
+> = [
+  ["a missing access token", { ...validCredentials, accessToken: undefined }],
+  ["an empty access token", { ...validCredentials, accessToken: "" }],
+  ["a blank access token", { ...validCredentials, accessToken: "   " }],
+  ["a null access token", { ...validCredentials, accessToken: null }],
+  ["a non-string access token", { ...validCredentials, accessToken: 123 }],
+  ["a missing refresh token", { ...validCredentials, refreshToken: undefined }],
+  ["an empty refresh token", { ...validCredentials, refreshToken: "" }],
+  ["a blank refresh token", { ...validCredentials, refreshToken: "   " }],
+  ["a null refresh token", { ...validCredentials, refreshToken: null }],
+  ["a non-string refresh token", { ...validCredentials, refreshToken: 123 }],
+  [
+    "a malformed access-token expiry",
+    { ...validCredentials, expiresAt: "not-a-date" },
+  ],
+  [
+    "a malformed refresh-token expiry",
+    { ...validCredentials, refreshTokenExpiresAt: "not-a-date" },
+  ],
+  [
+    "a syntactically shaped but impossible calendar date",
+    { ...validCredentials, expiresAt: "2030-02-30T00:00:00Z" },
+  ],
+];
+
 describe("BackendAuthClient", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -227,6 +262,36 @@ describe("BackendAuthClient", () => {
       fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
       const client = new BackendAuthClient(BASE_URL);
       await expect(client.logout("token")).resolves.toBe(true);
+    });
+  });
+
+  describe("successful credential response validation", () => {
+    it.each(malformedCredentialCases)(
+      "rejects %s for register, login, and refresh",
+      async (_description, credentials) => {
+        fetchMock.mockResolvedValue(jsonResponse(200, credentials));
+        const client = new BackendAuthClient(BASE_URL);
+
+        await expect(
+          client.register("user", "password123", "Display"),
+        ).resolves.toMatchObject({ kind: "unknown_failure" });
+        await expect(client.login("user", "password123")).resolves.toEqual({
+          kind: "unknown_failure",
+        });
+        await expect(client.refresh("old-token")).resolves.toEqual({
+          kind: "unknown_failure",
+        });
+      },
+    );
+
+    it("accepts valid credentials for refresh", async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, validCredentials));
+      const client = new BackendAuthClient(BASE_URL);
+
+      await expect(client.refresh("old-token")).resolves.toEqual({
+        kind: "success",
+        credentials: validCredentials,
+      });
     });
   });
 

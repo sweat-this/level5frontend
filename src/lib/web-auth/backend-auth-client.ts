@@ -72,6 +72,57 @@ export interface AuthBackendPort {
   getMe(accessToken: string): Promise<MeOutcome>;
 }
 
+const RFC3339_DATE_TIME =
+  /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/i;
+
+/**
+ * Runtime-checks only the security-critical credential fields that become durable web-session
+ * state. The generated OpenAPI type describes the expected wire shape at compile time, but a
+ * successful Backend response is still untrusted JSON at runtime.
+ */
+function isUsableCredentials(value: unknown): value is AccessTokenResponseDto {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const credentials = value as Record<string, unknown>;
+  if (
+    typeof credentials.accessToken !== "string" ||
+    credentials.accessToken.trim().length === 0 ||
+    typeof credentials.refreshToken !== "string" ||
+    credentials.refreshToken.trim().length === 0
+  ) {
+    return false;
+  }
+
+  return (
+    isUsableDateTime(credentials.expiresAt) &&
+    isUsableDateTime(credentials.refreshTokenExpiresAt)
+  );
+}
+
+function isUsableDateTime(value: unknown): value is string {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const match = RFC3339_DATE_TIME.exec(value);
+  if (!match) {
+    return false;
+  }
+
+  const [, year, month, day] = match;
+  const calendarDate = new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day)),
+  );
+  const hasValidCalendarDate =
+    calendarDate.getUTCFullYear() === Number(year) &&
+    calendarDate.getUTCMonth() === Number(month) - 1 &&
+    calendarDate.getUTCDate() === Number(day);
+
+  return hasValidCalendarDate && Number.isFinite(Date.parse(value));
+}
+
 function toCredentialOutcome<TInvalidKind extends string>(
   result: TransportResult<AccessTokenResponseDto>,
   invalidKind: TInvalidKind,
@@ -80,8 +131,11 @@ function toCredentialOutcome<TInvalidKind extends string>(
   | { kind: TInvalidKind }
   | { kind: "rate_limited" }
   | { kind: "unknown_failure" } {
-  if (result.kind === "success") {
+  if (result.kind === "success" && isUsableCredentials(result.data)) {
     return { kind: "success", credentials: result.data };
+  }
+  if (result.kind === "success") {
+    return { kind: "unknown_failure" };
   }
   if (result.error.kind === "http" && result.error.httpStatus === 401) {
     return { kind: invalidKind };
@@ -98,8 +152,11 @@ function toCredentialOutcome<TInvalidKind extends string>(
 function toRegisterOutcome(
   result: TransportResult<AccessTokenResponseDto>,
 ): RegisterOutcome {
-  if (result.kind === "success") {
+  if (result.kind === "success" && isUsableCredentials(result.data)) {
     return { kind: "success", credentials: result.data };
+  }
+  if (result.kind === "success") {
+    return { kind: "unknown_failure", traceId: undefined };
   }
   const { error } = result;
   if (error.kind === "http" && error.httpStatus === 400) {
